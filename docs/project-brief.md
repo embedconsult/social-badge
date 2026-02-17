@@ -5,7 +5,7 @@ Build a **single Crystal codebase** that operates as both:
 1. A local-first peer node (client + server responsibilities), and
 2. A web-enabled social endpoint that can federate over Mastodon-compatible protocols and relay concise messages over Meshtastic.
 
-The device experience targets e-paper rendering at **320x280** while also supporting a **400x300 badge UI mode** for constrained interactions.
+The device experience uses a **400x300 full local badge UI**, with message content rendered to a **320x240 e-paper content region** inside that UI.
 
 ## Core Requirements Captured
 - Language/runtime: **pure Crystal**.
@@ -55,12 +55,11 @@ The device experience targets e-paper rendering at **320x280** while also suppor
 - Notification policy engine (priority/event-type -> LED color/pattern + count update).
 
 ## Display Profile Strategy
-To reconcile dual dimensions (**320x280 e-paper** and **400x300 badge UI**):
-- Define screen profiles:
-  - `EPD_320x280` (primary rendering constraints).
-  - `BADGE_400x300` (enhanced layout if available).
-- Use responsive LVGL layout containers and typography scaling rules.
-- Keep interaction model identical, vary density only.
+To align with one local UI resolution and a dedicated message viewport:
+- Define a single local screen profile: `BADGE_400x300`.
+- Reserve a message-rendering viewport: `MSG_320x240` within the 400x300 layout.
+- Use LVGL layout containers to keep navigation/status chrome outside the message viewport.
+- Keep the interaction model identical between web and badge, while constraining badge composition controls.
 
 ## Milestone Sketch
 1. Bootstrap Crystal project + Kemal + Crystal-LVGL integration shell.

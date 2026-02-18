@@ -3,7 +3,7 @@
 ## Product Vision
 Build a **single Crystal codebase** that operates as both:
 1. A local-first peer node (client + server responsibilities), and
-2. A web-enabled social endpoint that can federate over Mastodon-compatible protocols and relay concise messages over Meshtastic.
+2. A web-enabled social endpoint that can federate over ActivityPub-compatible protocols (including Mastodon interoperability) and relay concise messages over Meshtastic.
 
 The device experience uses a **400x300 full local badge UI**, with message content rendered to a **320x240 e-paper content region** inside that UI.
 
@@ -11,7 +11,7 @@ The device experience uses a **400x300 full local badge UI**, with message conte
 - Language/runtime: **pure Crystal**.
 - Web framework/server: **Kemal**.
 - Embedded/device UI toolkit: **Crystal-LVGL**.
-- Federation: **Mastodon-compatible federation** (likely ActivityPub + WebFinger + HTTP Signatures ecosystem).
+- Federation: **full standalone ActivityPub-compatible federation** (inbox/outbox, actors, WebFinger, HTTP Signatures), interoperable with Mastodon but not dependent on it.
 - Radio/off-grid propagation: **Meshtastic** message path.
 - Unified peer model: one app role that can both publish and consume content.
 - Hardware controls:
@@ -65,13 +65,19 @@ To align with one local UI resolution and a dedicated message viewport:
 1. Bootstrap Crystal project + Kemal + Crystal-LVGL integration shell.
 2. Implement local timeline + posting in web UI.
 3. Add badge UI navigation and message viewing.
-4. Add ActivityPub/Mastodon federation pipeline.
+4. Add full standalone ActivityPub federation pipeline (with Mastodon interoperability).
 5. Add Meshtastic relay adapter + compact message projection.
 6. Hardware feedback (RGB/7-seg) and control bindings.
 7. End-to-end peer sync, offline/online transitions, and durability hardening.
 
+## Confirmed Decisions (from latest feedback)
+1. **Peer model and independence:** every instance must be fully stand-alone and functional without depending on Mastodon as an external service.
+2. **Topology:** all instances operate as peers; additionally, at least one instance should run on a fixed domain as a default/shared out-of-the-box message source.
+3. **Account source:** no local account provider in this app. Identity/account authority should come from either **Discourse** or **GitLab** (whichever is easier to integrate first).
+4. **Login standard preference:** use an open standard-based login flow, preferably **OpenID Connect (OIDC)**.
+
 ## Clarifying Questions
-1. **Federation scope:** do you want full ActivityPub server compatibility (inbox/outbox, actors, signatures), or initially Mastodon-oriented interoperability for posting/following only?
+1. **Account provider choice for v1:** should we prioritize GitLab OIDC first, or Discourse-based auth first (if both are available)?
 2. **Meshtastic semantics:** should all posts be relayed over Meshtastic, or only selected low-bandwidth message types (e.g., short text/status/alerts)?
 3. **Identity model:** one identity shared across web + badge + mesh, or separate local/mesh personas bridged by the app?
 4. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?

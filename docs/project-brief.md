@@ -49,7 +49,7 @@ The device experience uses a **400x300 full local badge UI**, with message conte
 
 ### 4) UI layer
 - **Badge UI (Crystal-LVGL)** for quick read/respond triage, notifications, counts.
-- **Web UI (Kemal + templates/API)** for richer composition/edit/administration.
+- **Web UI (Kemal + templates/API)** should mimic the badge-local LVGL interface and extend it with richer composition/edit/administration.
 - Shared application services to keep behavior consistent across both UIs.
 
 ### 5) Device integration layer
@@ -102,12 +102,19 @@ To align with one local UI resolution and a dedicated message viewport:
   - `UNVERIFIED`: no trusted proof currently available.
 - Implement a simple **web-of-trust extension** where trust can be delegated from known peers to identity attestations they sign.
 - Ensure the UI clearly indicates assurance level so users can distinguish direct OIDC verification from proxy/peer-based verification.
+- Local trust actions must always be user-approved; trust is never auto-granted.
+- Trust prompt metadata should explicitly distinguish: direct OIDC verification, trusted-peer attestation, untrusted-but-OIDC-verified peer attestation, and untrusted-and-unverified peer attestation.
+- Apply a default trust-downgrade period and propagate revocations across peers, but do not perform automated actions beyond trust-level downgrades.
+
+## Confirmed Decisions (additional)
+9. **Security policy detail:** all trust elevation requires explicit local-user trust action. Trust prompts must show identity proof source and attestation quality; include downgrade timers and propagated revocation handling, with no automated actions beyond lowering trust levels.
+10. **Badge input UX:** 4-way+push is browse-first with canned replies. Support optional USB keyboard for richer entry, with no on-screen keyboard. Emoji/tapback/Font Awesome response inputs should be preference-controlled.
+11. **Notification behavior:** user preferences map system events to RGB LED colors/patterns. Provide stock mappings plus an extensible Crystal-block execution model in a notification fiber. Persist preferences in JSON and include event sources for mention, DM, relay failure, and battery/network warnings.
+12. **2-digit 7-seg behavior:** display meaning is preference-driven and tied to system-state notifications (e.g., unread, mentions, queued outbound, errors).
+13. **Deployment topology:** each badge is its own peer with web administration. Multi-instance per user is allowed, but settings remain per-instance (not globally synced). Instances should exchange trust context and consume peer messages under the shared established identity.
+14. **Kemal web interface:** should mimic badge-local LVGL interaction patterns and extend capabilities where appropriate.
+15. **Success criteria for v1:** two badges exchange posts over Meshtastic, a public web server displays and forwards public posts, and federation posts are visible on Mastodon.
 
 ## Clarifying Questions
-1. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
-2. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
-3. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
-4. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
-5. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
-6. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
-7. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?
+1. **Attestation policy defaults:** what exact default downgrade interval and revocation TTL should v1 ship with?
+2. **USB keyboard scope:** should USB keyboard entry be allowed only in web-admin mode or also directly on badge-local authoring screens?

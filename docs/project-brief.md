@@ -43,6 +43,9 @@ The device experience uses a **400x300 full local badge UI**, with message conte
   - posts/messages,
   - sync state,
   - outbound retry queue.
+- Resource envelope target for v1 runtime + data:
+  - **Disk budget:** 2 GB available.
+  - **Memory budget:** 128 MB available.
 
 ### 4) UI layer
 - **Badge UI (Crystal-LVGL)** for quick read/respond triage, notifications, counts.
@@ -86,6 +89,7 @@ To align with one local UI resolution and a dedicated message viewport:
 4. **Login standard preference:** use an open standard-based login flow, preferably **OpenID Connect (OIDC)**.
 5. **Message constraints:** all authored messages should remain Meshtastic-friendly while supporting rich rendering via extended markdown, UTF-8, emojis/icons, QR generation, and URL-based media references.
 6. **Identity model:** use a single primary identity rooted in OpenID Connect; add offline-capable peer-signature attestations on Meshtastic to provide graded trust when direct OIDC validation is unavailable.
+7. **Storage constraints:** design for 2 GB disk and 128 MB memory available to the full application.
 
 ## Identity Trust & Verification Model (confirmed)
 - Maintain **one canonical user identity** anchored to OIDC-authenticated account claims.
@@ -99,12 +103,11 @@ To align with one local UI resolution and a dedicated message viewport:
 
 ## Clarifying Questions
 1. **Account provider choice for v1:** should we prioritize GitLab OIDC first, or Discourse-based auth first (if both are available)?
-2. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?
-3. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
-4. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
-5. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
-6. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
-7. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
-8. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
-9. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
-10. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?
+2. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
+3. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
+4. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
+5. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
+6. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
+7. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
+8. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
+9. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?

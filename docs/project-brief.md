@@ -85,16 +85,26 @@ To align with one local UI resolution and a dedicated message viewport:
 3. **Account source:** no local account provider in this app. Identity/account authority should come from either **Discourse** or **GitLab** (whichever is easier to integrate first).
 4. **Login standard preference:** use an open standard-based login flow, preferably **OpenID Connect (OIDC)**.
 5. **Message constraints:** all authored messages should remain Meshtastic-friendly while supporting rich rendering via extended markdown, UTF-8, emojis/icons, QR generation, and URL-based media references.
+6. **Identity model:** use a single primary identity rooted in OpenID Connect; add offline-capable peer-signature attestations on Meshtastic to provide graded trust when direct OIDC validation is unavailable.
+
+## Identity Trust & Verification Model (confirmed)
+- Maintain **one canonical user identity** anchored to OIDC-authenticated account claims.
+- Support **offline Meshtastic identity assertions** signed by trusted peers.
+- Represent identity assurance with explicit trust levels, for example:
+  - `FULL_OIDC_VERIFIED`: directly validated via OIDC provider.
+  - `PEER_ATTESTED`: validated indirectly through one or more trusted peer signatures.
+  - `UNVERIFIED`: no trusted proof currently available.
+- Implement a simple **web-of-trust extension** where trust can be delegated from known peers to identity attestations they sign.
+- Ensure the UI clearly indicates assurance level so users can distinguish direct OIDC verification from proxy/peer-based verification.
 
 ## Clarifying Questions
 1. **Account provider choice for v1:** should we prioritize GitLab OIDC first, or Discourse-based auth first (if both are available)?
-2. **Identity model:** one identity shared across web + badge + mesh, or separate local/mesh personas bridged by the app?
-3. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?
-4. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
-5. **Security model:** should peer links be trusted-local only initially, or require cryptographic verification/signing from day one across both federation and mesh?
-6. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
-7. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
-8. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
-9. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
-10. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
-11. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?
+2. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?
+3. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
+4. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
+5. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
+6. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
+7. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
+8. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
+9. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
+10. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?

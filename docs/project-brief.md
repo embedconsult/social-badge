@@ -12,7 +12,7 @@ The device experience uses a **400x300 full local badge UI**, with message conte
 - Web framework/server: **Kemal**.
 - Embedded/device UI toolkit: **Crystal-LVGL**.
 - Federation: **full standalone ActivityPub-compatible federation** (inbox/outbox, actors, WebFinger, HTTP Signatures), interoperable with Mastodon but not dependent on it.
-- Radio/off-grid propagation: **Meshtastic** message path.
+- Radio/off-grid propagation: **Meshtastic-first message path**, with all authored content constrained to Meshtastic-friendly payload semantics.
 - Unified peer model: one app role that can both publish and consume content.
 - Hardware controls:
   - one 4-way button with push,
@@ -61,12 +61,21 @@ To align with one local UI resolution and a dedicated message viewport:
 - Use LVGL layout containers to keep navigation/status chrome outside the message viewport.
 - Keep the interaction model identical between web and badge, while constraining badge composition controls.
 
+## Message Format & Rendering Profile (confirmed)
+- Keep **all messages Meshtastic-friendly** as the canonical content model.
+- Use an **extended markdown dialect** for authored content so rich formatting can still render well in the `MSG_320x240` window.
+- Require strong **UTF-8 coverage** and mixed font sizing/weight support for readable compact layouts.
+- Include a robust emoji set plus **Font Awesome-style icon extensions** for compact visual semantics.
+- Support **QR code generation** from message content/metadata for quick handoff flows.
+- Allow **image URLs** as references for pull-on-demand media instead of embedding heavy payloads in mesh messages.
+- Treat SVG as optional and constrained: prefer icon-level vector support, but avoid large inline SVG payloads that hurt Meshtastic message size budgets.
+
 ## Milestone Sketch
 1. Bootstrap Crystal project + Kemal + Crystal-LVGL integration shell.
 2. Implement local timeline + posting in web UI.
 3. Add badge UI navigation and message viewing.
 4. Add full standalone ActivityPub federation pipeline (with Mastodon interoperability).
-5. Add Meshtastic relay adapter + compact message projection.
+5. Add Meshtastic relay adapter + canonical meshtastic-friendly extended-markdown projection.
 6. Hardware feedback (RGB/7-seg) and control bindings.
 7. End-to-end peer sync, offline/online transitions, and durability hardening.
 
@@ -75,17 +84,17 @@ To align with one local UI resolution and a dedicated message viewport:
 2. **Topology:** all instances operate as peers; additionally, at least one instance should run on a fixed domain as a default/shared out-of-the-box message source.
 3. **Account source:** no local account provider in this app. Identity/account authority should come from either **Discourse** or **GitLab** (whichever is easier to integrate first).
 4. **Login standard preference:** use an open standard-based login flow, preferably **OpenID Connect (OIDC)**.
+5. **Message constraints:** all authored messages should remain Meshtastic-friendly while supporting rich rendering via extended markdown, UTF-8, emojis/icons, QR generation, and URL-based media references.
 
 ## Clarifying Questions
 1. **Account provider choice for v1:** should we prioritize GitLab OIDC first, or Discourse-based auth first (if both are available)?
-2. **Meshtastic semantics:** should all posts be relayed over Meshtastic, or only selected low-bandwidth message types (e.g., short text/status/alerts)?
-3. **Identity model:** one identity shared across web + badge + mesh, or separate local/mesh personas bridged by the app?
-4. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?
-5. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
-6. **Security model:** should peer links be trusted-local only initially, or require cryptographic verification/signing from day one across both federation and mesh?
-7. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
-8. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
-9. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
-10. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
-11. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
-12. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?
+2. **Identity model:** one identity shared across web + badge + mesh, or separate local/mesh personas bridged by the app?
+3. **Storage constraints:** any expected disk/RAM limits on target hardware that should constrain retention, indexing, and media support?
+4. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
+5. **Security model:** should peer links be trusted-local only initially, or require cryptographic verification/signing from day one across both federation and mesh?
+6. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
+7. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
+8. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
+9. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
+10. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
+11. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?

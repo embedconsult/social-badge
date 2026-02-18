@@ -70,6 +70,7 @@ To align with one local UI resolution and a dedicated message viewport:
 - Require strong **UTF-8 coverage** and mixed font sizing/weight support for readable compact layouts.
 - Include a robust emoji set plus **Font Awesome-style icon extensions** for compact visual semantics.
 - Support **QR code generation** from message content/metadata for quick handoff flows.
+- Allow small embedded **base64 PNG** images (grayscale/black-and-white) for v1, within strict payload limits.
 - Allow **image URLs** as references for pull-on-demand media instead of embedding heavy payloads in mesh messages.
 - Treat SVG as optional and constrained: prefer icon-level vector support, but avoid large inline SVG payloads that hurt Meshtastic message size budgets.
 
@@ -85,11 +86,12 @@ To align with one local UI resolution and a dedicated message viewport:
 ## Confirmed Decisions (from latest feedback)
 1. **Peer model and independence:** every instance must be fully stand-alone and functional without depending on Mastodon as an external service.
 2. **Topology:** all instances operate as peers; additionally, at least one instance should run on a fixed domain as a default/shared out-of-the-box message source.
-3. **Account source:** no local account provider in this app. Identity/account authority should come from either **Discourse** or **GitLab** (whichever is easier to integrate first).
+3. **Account source:** no local account provider in this app. For v1, use **Discourse** as the identity/account authority via `forum.beagleboard.org`.
 4. **Login standard preference:** use an open standard-based login flow, preferably **OpenID Connect (OIDC)**.
 5. **Message constraints:** all authored messages should remain Meshtastic-friendly while supporting rich rendering via extended markdown, UTF-8, emojis/icons, QR generation, and URL-based media references.
 6. **Identity model:** use a single primary identity rooted in OpenID Connect; add offline-capable peer-signature attestations on Meshtastic to provide graded trust when direct OIDC validation is unavailable.
 7. **Storage constraints:** design for 2 GB disk and 128 MB memory available to the full application.
+8. **Media handling for v1:** allow small embedded **base64 PNG** payloads for grayscale or black-and-white images, while keeping richer/larger media URL-referenced to remain Meshtastic-friendly.
 
 ## Identity Trust & Verification Model (confirmed)
 - Maintain **one canonical user identity** anchored to OIDC-authenticated account claims.
@@ -102,12 +104,10 @@ To align with one local UI resolution and a dedicated message viewport:
 - Ensure the UI clearly indicates assurance level so users can distinguish direct OIDC verification from proxy/peer-based verification.
 
 ## Clarifying Questions
-1. **Account provider choice for v1:** should we prioritize GitLab OIDC first, or Discourse-based auth first (if both are available)?
-2. **Media handling:** text-only v1, or images/attachments required for web and downsampled previews for badge?
-3. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
-4. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
-5. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
-6. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
-7. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
-8. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
-9. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?
+1. **Security policy detail:** what minimum attestation policy should unlock peer-attested identity trust (e.g., one trusted signer vs quorum/threshold, expiration window, and revocation behavior)?
+2. **Badge input UX:** should 4-way+push focus on browse actions with canned replies, or do you want full text entry on-device (e.g., multi-tap/selector keyboard)?
+3. **Notification behavior:** what event classes map to RGB LED colors/patterns (mention, DM, relay failure, battery/network warning)?
+4. **2-digit 7-seg meaning:** unread count only, or mode-dependent count (mentions, queued outbound, errors)?
+5. **Deployment topology:** single peer per badge with optional web administration, or multi-peer cluster syncing a shared account?
+6. **Kemal web interface:** server-rendered HTML only for v1, or JSON API + JS front-end also needed?
+7. **Success criteria for v1:** what exact “done” scenario should we optimize for (e.g., two badges exchanging posts over mesh + visible federation post on Mastodon)?

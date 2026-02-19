@@ -52,3 +52,10 @@ Meshtastic-friendly representations.
 peer envelope ingestion. `PeerRelayService` keeps HTTP parsing concerns separate from transport
 state transitions. Kemal exposes this baseline via JSON endpoints for enqueueing relay jobs,
 inspecting queue state, marking delivery outcomes, and accepting inbound envelopes.
+
+## Web typesetting is canonical; badge consumes rendered image artifacts
+
+For the `MSG_320x240` viewport, browser layout behavior is the canonical typesetting reference.
+The badge LVGL path should consume deterministic `320x240` image artifacts produced from the same
+layout contract, while web output preserves selectable/copyable text. Trust indicators stay in
+chrome only and never alter message body content.

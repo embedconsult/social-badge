@@ -3,21 +3,31 @@ require "kemal"
 require "./timeline_service"
 require "./message_creation_service"
 require "./policy_service"
+require "./authoring_page_service"
 require "./peer_relay_service"
 require "./peer_transport_service"
 
 module SocialBadge
   class WebApp
     def initialize(
-      @timeline : TimelineService = TimelineService.new,
-      @policies : PolicyService = PolicyService.new,
-      @peer_transport : PeerTransportService = PeerTransportService.new(@timeline),
+      timeline : TimelineService = TimelineService.new,
+      policies : PolicyService = PolicyService.new,
+      peer_transport : PeerTransportService? = nil,
     )
+      @timeline = timeline
+      @policies = policies
+      @peer_transport = peer_transport || PeerTransportService.new(@timeline)
       @message_creation = MessageCreationService.new(@timeline)
+      @authoring_page = AuthoringPageService.new
       @peer_relay = PeerRelayService.new(@peer_transport)
     end
 
     def routes
+      get "/" do |env|
+        env.response.content_type = "text/html; charset=utf-8"
+        @authoring_page.render(@timeline.identity)
+      end
+
       get "/health" do |env|
         env.response.content_type = "application/json"
         {status: "ok", service: "social-badge", version: VERSION}.to_json

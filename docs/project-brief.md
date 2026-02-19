@@ -115,6 +115,28 @@ To align with one local UI resolution and a dedicated message viewport:
 14. **Kemal web interface:** should mimic badge-local LVGL interaction patterns and extend capabilities where appropriate.
 15. **Success criteria for v1:** two badges exchange posts over Meshtastic, a public web server displays and forwards public posts, and federation posts are visible on Mastodon.
 
-## Clarifying Questions
-1. **Attestation policy defaults:** what exact default downgrade interval and revocation TTL should v1 ship with?
-2. **USB keyboard scope:** should USB keyboard entry be allowed only in web-admin mode or also directly on badge-local authoring screens?
+## V1 completion plan (finalized)
+
+### Resolved defaults
+1. **Attestation downgrade interval:** default to **30 days** with no renewal activity.
+2. **Revocation propagation TTL:** default to **7 days** for rebroadcast over peer channels.
+3. **USB keyboard scope:** allow keyboard entry in both web administration and badge-local authoring screens, while preserving browse-first controls as the default badge interaction mode.
+
+### Completion checkpoints
+1. **Core identity + trust implementation**
+   - OIDC-backed identity linking through `forum.beagleboard.org`.
+   - Trust state model with `FULL_OIDC_VERIFIED`, `PEER_ATTESTED`, and `UNVERIFIED` plus local-user approval gates.
+2. **Meshtastic-first message path**
+   - Meshtastic-friendly canonical message envelope.
+   - Message size guardrails, dedupe IDs, and compact metadata handling.
+3. **Peer transport baseline**
+   - HTTP peer exchange endpoints and queue/retry policy.
+   - Meshtastic adapter handshake for publish/receive flows.
+4. **Federation baseline**
+   - ActivityPub actor, inbox, outbox, and WebFinger support with Mastodon interoperability validation.
+5. **UI and hardware parity**
+   - Badge UI and Kemal web UI aligned on timeline and compose interaction semantics.
+   - RGB and 7-segment preference-driven notification mapping persisted in JSON.
+6. **Durability and operations**
+   - Local persistence for identities, posts, trust assertions, and outbound queue state.
+   - Success criteria demonstration: two badges exchange posts over Meshtastic, a web server forwards public posts, and posts are visible in Mastodon.

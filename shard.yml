@@ -9,6 +9,10 @@ crystal: ">= 1.10.0"
 
 license: MIT
 
+targets:
+  social-badge:
+    main: src/main.cr
+
 dependencies:
   kemal:
     github: kemalcr/kemal

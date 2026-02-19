@@ -14,5 +14,5 @@ dependencies:
     github: kemalcr/kemal
   lvgl-crystal:
     github: embedconsult/lvgl-crystal
-  crystal-sqlite3:
+  sqlite3:
     github: crystal-lang/crystal-sqlite3

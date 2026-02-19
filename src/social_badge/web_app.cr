@@ -1,10 +1,14 @@
 require "json"
 require "kemal"
 require "./timeline_service"
+require "./policy_service"
 
 module SocialBadge
   class WebApp
-    def initialize(@timeline : TimelineService = TimelineService.new)
+    def initialize(
+      @timeline : TimelineService = TimelineService.new,
+      @policies : PolicyService = PolicyService.new,
+    )
       @message_creation = MessageCreationService.new(@timeline)
     end
 
@@ -23,6 +27,16 @@ module SocialBadge
         env.response.content_type = "application/json"
         limit = env.params.query["limit"]?.try(&.to_i?) || 25
         @timeline.timeline(limit.clamp(1, 100)).to_json
+      end
+
+      get "/api/policy/trust" do |env|
+        env.response.content_type = "application/json"
+        @policies.trust_policy.to_json
+      end
+
+      get "/api/policy/input" do |env|
+        env.response.content_type = "application/json"
+        @policies.input_policy.to_json
       end
 
       post "/api/messages" do |env|

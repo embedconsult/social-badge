@@ -27,3 +27,14 @@ To remove ambiguity from v1 delivery planning, two operational defaults are now 
 USB keyboard input is also explicitly enabled for both web administration and badge-local
 authoring screens. The badge interaction model remains browse-first by default, but this keeps
 v1 composition practical without requiring an on-screen keyboard.
+
+## V1 policy defaults are exposed as API resources
+
+`PolicyService` centralizes fixed v1 trust and input defaults in one composable service object.
+Kemal exposes these via machine-readable JSON endpoints:
+
+- `GET /api/policy/trust`
+- `GET /api/policy/input`
+
+This keeps route handlers concise while making operational defaults discoverable to both
+badge and web clients without duplicating constants across UI code.

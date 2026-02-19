@@ -33,4 +33,10 @@ module SocialBadge
       raise ArgumentError.new("Message body exceeds #{MAX_BODY_LENGTH} characters") if @body.size > MAX_BODY_LENGTH
     end
   end
+
+  struct CreateMessageRequest
+    include JSON::Serializable
+
+    getter body : String
+  end
 end

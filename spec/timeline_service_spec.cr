@@ -20,4 +20,12 @@ describe SocialBadge::TimelineService do
       service.post("x" * (SocialBadge::Message::MAX_BODY_LENGTH + 1))
     end
   end
+
+  it "rejects blank messages after trimming" do
+    service = SocialBadge::TimelineService.new
+
+    expect_raises(ArgumentError, /must not be blank/) do
+      service.post("   ")
+    end
+  end
 end

@@ -16,8 +16,8 @@ module SocialBadge
     private def parse_payload(request_body : IO?) : CreateMessageRequest
       raw_payload = request_body.try(&.gets_to_end) || "{}"
       CreateMessageRequest.from_json(raw_payload)
-    rescue ex : JSON::ParseException | JSON::SerializableError
-      raise ArgumentError.new("#{ERROR_PREFIX}: #{ex.message}")
+    rescue JSON::ParseException | JSON::SerializableError
+      raise ArgumentError.new(ERROR_PREFIX)
     end
   end
 end

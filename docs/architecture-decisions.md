@@ -8,6 +8,8 @@ missing or malformed, and keeps endpoint logic compact.
 
 Parsing and message creation are delegated to `MessageCreationService`, so route handlers remain
 small and focused on HTTP concerns while domain validation continues in `TimelineService`.
+The service normalizes parse/shape failures to compact, stable error strings so API clients can
+rely on consistent machine-readable 422 responses.
 
 ## Keep runtime dependencies minimal
 

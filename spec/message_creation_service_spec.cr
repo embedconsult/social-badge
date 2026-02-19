@@ -15,7 +15,7 @@ describe SocialBadge::MessageCreationService do
     timeline = SocialBadge::TimelineService.new
     service = SocialBadge::MessageCreationService.new(timeline)
 
-    expect_raises(ArgumentError, /Invalid message payload/) do
+    expect_raises(ArgumentError, "Invalid message payload") do
       service.create(IO::Memory.new("not-json"))
     end
   end
@@ -24,8 +24,17 @@ describe SocialBadge::MessageCreationService do
     timeline = SocialBadge::TimelineService.new
     service = SocialBadge::MessageCreationService.new(timeline)
 
-    expect_raises(ArgumentError, /Invalid message payload/) do
+    expect_raises(ArgumentError, "Invalid message payload") do
       service.create(IO::Memory.new("{}"))
+    end
+  end
+
+  it "returns a validation error when no request body is provided" do
+    timeline = SocialBadge::TimelineService.new
+    service = SocialBadge::MessageCreationService.new(timeline)
+
+    expect_raises(ArgumentError, "Invalid message payload") do
+      service.create(nil)
     end
   end
 end

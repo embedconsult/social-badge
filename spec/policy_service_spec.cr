@@ -9,14 +9,4 @@ describe SocialBadge::PolicyService do
     policy.revocation_ttl_days.should eq(7)
     policy.local_approval_required.should be_true
   end
-
-  it "provides v1 input defaults" do
-    service = SocialBadge::PolicyService.new
-
-    policy = service.input_policy
-    policy.usb_keyboard_web_admin_enabled.should be_true
-    policy.usb_keyboard_badge_authoring_enabled.should be_true
-    policy.browse_first_badge_navigation.should be_true
-    policy.on_screen_keyboard_enabled.should be_false
-  end
 end

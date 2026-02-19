@@ -120,7 +120,7 @@ To align with one local UI resolution and a dedicated message viewport:
 ### Resolved defaults
 1. **Attestation downgrade interval:** default to **30 days** with no renewal activity.
 2. **Revocation propagation TTL:** default to **7 days** for rebroadcast over peer channels.
-3. **USB keyboard scope:** allow keyboard entry in both web administration and badge-local authoring screens, while preserving browse-first controls as the default badge interaction mode.
+3. **USB keyboard scope:** allow direct USB keyboard entry in badge-local authoring screens only and browse-first default badge interaction with 4-way button, keeping webapp interaction exclusively over the web interface.
 
 ### Completion checkpoints
 1. **Core identity + trust implementation**

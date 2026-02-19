@@ -22,11 +22,12 @@ module SocialBadge
       end
 
       post "/api/messages" do |env|
-        payload = Hash(String, String).from_json(env.request.body.not_nil!.gets_to_end)
-        message = @timeline.post(payload.fetch("body"))
+        request_body = env.request.body.try(&.gets_to_end) || "{}"
+        payload = CreateMessageRequest.from_json(request_body)
+        message = @timeline.post(payload.body)
         env.response.status_code = 201
         message.to_json
-      rescue ex : ArgumentError | KeyError | JSON::ParseException
+      rescue ex : ArgumentError | JSON::ParseException | JSON::SerializableError
         env.response.status_code = 422
         {error: ex.message}.to_json
       end

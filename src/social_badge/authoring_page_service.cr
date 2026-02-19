@@ -311,9 +311,9 @@ module SocialBadge
             let currentPage = 0;
 
             function normalize(text) {
-              return text.replace(/\r\n?/g, '\n').split('\n').map(function (line) {
+              return text.replace(/\\r\\n?/g, '\\n').split('\\n').map(function (line) {
                 return line.replace(/\\s+$/g, '');
-              }).join('\n');
+              }).join('\\n');
             }
 
             function measure(text) {
@@ -371,21 +371,21 @@ module SocialBadge
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
 
-              const linked = escaped.replace(/[([^]]+)](([^)]+))/g, function (_, label, url) {
+              const linked = escaped.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, function (_, label, url) {
                 const safeUrl = url.replace(/"/g, '&quot;');
                 return '<a href="' + safeUrl + '" target="_blank" rel="noreferrer noopener">' + label + '</a>';
               });
 
               return linked
                 .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/**([^*]+)**/g, '<strong>$1</strong>')
-                .replace(/*([^*]+)*/g, '<em>$1</em>');
+                .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
+                .replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
             }
 
             function paginate(text) {
               const normalized = normalize(text);
               const wrapped = [];
-              normalized.split('\n').forEach(function (rawLine) {
+              normalized.split('\\n').forEach(function (rawLine) {
                 wrapLine(rawLine).forEach(function (line) {
                   wrapped.push(line);
                 });

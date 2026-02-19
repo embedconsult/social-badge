@@ -1,0 +1,18 @@
+name: social-badge
+version: 0.1.0
+
+authors:
+  - Codex Agent
+  - Jason Kridner <jkridner@beagleboard.org>
+
+crystal: ">= 1.10.0"
+
+license: MIT
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+  lvgl-crystal:
+    github: embedconsult/lvgl-crystal
+  crystal-sqlite3:
+    github: crystal-lang/crystal-sqlite3

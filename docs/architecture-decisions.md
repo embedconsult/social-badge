@@ -24,17 +24,31 @@ To remove ambiguity from v1 delivery planning, two operational defaults are now 
 - identity trust downgrade interval defaults to 30 days without renewal;
 - revocation propagation TTL defaults to 7 days over peer channels.
 
-USB keyboard input is also explicitly enabled for both web administration and badge-local
-authoring screens. The badge interaction model remains browse-first by default, but this keeps
-v1 composition practical without requiring an on-screen keyboard.
+USB keyboard input is enabled for badge-local authoring screens only. Web interaction remains
+web-interface driven and does not model direct keyboard attachment as an app-level input mode.
+The badge interaction model remains browse-first by default, which keeps v1 composition practical
+without requiring an on-screen keyboard.
 
-## V1 policy defaults are exposed as API resources
+## V1 trust defaults are exposed as API resources
 
-`PolicyService` centralizes fixed v1 trust and input defaults in one composable service object.
-Kemal exposes these via machine-readable JSON endpoints:
+`PolicyService` centralizes fixed v1 trust defaults in one composable service object.
+Kemal exposes this via a machine-readable JSON endpoint:
 
 - `GET /api/policy/trust`
-- `GET /api/policy/input`
 
-This keeps route handlers concise while making operational defaults discoverable to both
-badge and web clients without duplicating constants across UI code.
+This keeps route handlers concise while making operational defaults discoverable to clients
+without duplicating constants across UI code.
+
+## Meshtastic envelopes are canonical for peer relay
+
+`MeshtasticEnvelopeService` projects timeline messages into compact envelopes with explicit
+dedupe keys, trust level, and relay-hop metadata. The envelope model enforces v1 guardrails
+for payload/body size and compact metadata lengths so peer transport always uses
+Meshtastic-friendly representations.
+
+## Peer relay baseline uses explicit queue + retry state
+
+`PeerTransportService` owns outbound relay queue state, exponential retry backoff, and inbound
+peer envelope ingestion. `PeerRelayService` keeps HTTP parsing concerns separate from transport
+state transitions. Kemal exposes this baseline via JSON endpoints for enqueueing relay jobs,
+inspecting queue state, marking delivery outcomes, and accepting inbound envelopes.

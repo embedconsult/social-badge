@@ -7,10 +7,13 @@ Initial Crystal scaffold for the Social Badge peer node.
 - Crystal project layout compatible with `crystal init` conventions.
 - Kemal-based HTTP shell with health, profile, and timeline endpoints.
 - A small in-memory domain service for posting Meshtastic-friendly messages.
+- Canonical Meshtastic envelope projection and HTTP peer relay queue/retry endpoints.
 - Explicit JSON request models for API payload validation.
 - Project-level `AGENTS.md` with coding workflow guidance.
 
 See `docs/architecture-decisions.md` for implementation rationale.
+See `docs/protocol-implementation-notes.md` for ActivityPub/WebFinger and Meshtastic
+implementation requirements.
 
 ## Run (when Crystal is available)
 

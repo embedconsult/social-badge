@@ -1,6 +1,8 @@
 require "json"
 
 module SocialBadge
+  # Fixed v1 trust defaults. These are read-only policy values, not user-tunable
+  # runtime settings in this repository.
   struct TrustPolicy
     include JSON::Serializable
 

@@ -28,4 +28,25 @@ describe SocialBadge::TimelineService do
       service.post("   ")
     end
   end
+
+  it "ingests peer envelopes and deduplicates on message id" do
+    service = SocialBadge::TimelineService.new
+
+    envelope = SocialBadge::MeshtasticEnvelope.new(
+      message_id: "peer-1",
+      author_id: "peer:demo",
+      body: "hello from peer",
+      created_at_unix_ms: Time.utc.to_unix_ms,
+      trust_level: SocialBadge::TrustLevel::PeerAttested,
+      dedupe_key: "abc123",
+      origin: "peer"
+    )
+
+    first_ingest = service.receive(envelope)
+    second_ingest = service.receive(envelope)
+
+    first_ingest.should_not be_nil
+    second_ingest.should be_nil
+    service.timeline.first.id.should eq("peer-1")
+  end
 end

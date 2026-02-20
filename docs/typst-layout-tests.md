@@ -1,7 +1,7 @@
 # Typst Layout Plugin + Bit-Exact Tests
 
 This repository includes a Typst layout package and a Crystal harness to produce
-bit-exact PNG fixtures for `MSG_320x240` rendering.
+bit-exact PNG fixtures for `MSG_320x240` message-window rendering.
 
 ## Files
 
@@ -12,18 +12,23 @@ bit-exact PNG fixtures for `MSG_320x240` rendering.
 
 ## Typst package API
 
-Use `render-badge(...)` from `typst/social-badge/layout.typ`.
+Use `render-message-window(...)` from `typst/social-badge/layout.typ`.
 
 Parameters:
 
-1. `lines` array of body text lines.
-2. `artifacts` array of dictionaries: `(kind: "...", label: "...")`.
-3. `font-id` short profile ID: `nsm`, `ns`, `ser`, `atk`, `ibm`.
-4. `placement`: `right`, `left`, `top`, `bottom`, `none`.
-5. Optional chrome labels: `trust`, `author`, `stamp`.
+1. `message` raw authored text (including Typst-style control directives).
+2. Optional defaults for `default-font` and `default-placement`.
 
-The package applies fixed geometry for 400x300 chrome and the 320x240 viewport,
-with a single-page hard limit and no pagination controls.
+The package renders only the message window (`320x240`) with a fixed `8px` inset
+content box (`304x224`). It does not render device chrome.
+
+Supported non-printing directives inside `message`:
+
+1. `#font("nsm"|"ns"|"ser"|"atk"|"ibm")`
+2. `#place("right"|"left"|"top"|"bottom"|"none")`
+3. `#qr("https://...")`
+4. `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
+5. `#contact("Name", "phone", "email", "https://url")`
 
 ## Running checks
 

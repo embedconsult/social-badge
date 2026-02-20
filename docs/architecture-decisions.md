@@ -73,8 +73,9 @@ limit with no pagination fallback; overflow must be corrected at author time.
 
 ## Typst package is the fixture renderer for bit-exact layout tests
 
-`typst/social-badge/layout.typ` defines the deterministic 400x300 + 320x240
-geometry contract used for fixture rendering. `scripts/check_typst_layouts.cr`
-compiles cases from `testdata/typst/layout_cases.json` to PNG and verifies
-SHA-256 hashes for bit-exact regression checks. This keeps layout validation
-machine-checkable while the browser preview evolves.
+`typst/social-badge/layout.typ` defines the deterministic `320x240` message
+window typesetting contract (without UI chrome) used for fixture rendering.
+`scripts/check_typst_layouts.cr` compiles cases from
+`testdata/typst/layout_cases.json` directly from raw message content and
+verifies SHA-256 hashes for bit-exact regression checks. This keeps layout
+validation machine-checkable while the browser preview evolves.

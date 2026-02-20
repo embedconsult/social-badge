@@ -166,4 +166,5 @@ Notes:
 
 Use the Typst package at `typst/social-badge/layout.typ` plus
 `scripts/check_typst_layouts.cr` to produce and verify deterministic PNG
-fixtures for regression checks.
+fixtures for regression checks. The Typst package is scoped to message-window
+typesetting only (`320x240`) and intentionally excludes UI chrome.

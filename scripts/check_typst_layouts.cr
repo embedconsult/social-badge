@@ -9,14 +9,7 @@ module SocialBadge
     DEFAULT_CASES     = File.join(ROOT_DIR, "testdata/typst/layout_cases.json")
     DEFAULT_OUTPUT    = File.join(ROOT_DIR, "testdata/typst/out")
     DEFAULT_PPI       = "96"
-    DEFAULT_RENDER_FN = "render-badge"
-
-    class ArtifactSpec
-      include JSON::Serializable
-
-      getter kind : String
-      getter label : String
-    end
+    DEFAULT_RENDER_FN = "render-message-window"
 
     class LayoutCase
       include JSON::Serializable
@@ -26,26 +19,8 @@ module SocialBadge
       @[JSON::Field(default: "")]
       getter description : String = ""
 
-      @[JSON::Field(key: "font_id", default: "nsm")]
-      getter font_id : String = "nsm"
-
-      @[JSON::Field(default: "right")]
-      getter placement : String = "right"
-
-      @[JSON::Field(default: "UNVERIFIED")]
-      getter trust : String = "UNVERIFIED"
-
-      @[JSON::Field(default: "Demo Peer")]
-      getter author : String = "Demo Peer"
-
-      @[JSON::Field(default: "now")]
-      getter stamp : String = "now"
-
-      @[JSON::Field(default: [] of String)]
-      getter lines : Array(String) = [] of String
-
-      @[JSON::Field(default: [] of ArtifactSpec)]
-      getter artifacts : Array(ArtifactSpec) = [] of ArtifactSpec
+      @[JSON::Field(default: "")]
+      getter message : String = ""
 
       @[JSON::Field(key: "expected_sha256")]
       property expected_sha256 : String?
@@ -163,21 +138,9 @@ module SocialBadge
         String.build do |io|
           io << "#import " << typst_string(import_path) << ": " << DEFAULT_RENDER_FN << "\n\n"
           io << "#" << DEFAULT_RENDER_FN << "(\n"
-          io << "  trust: " << typst_string(layout_case.trust) << ",\n"
-          io << "  author: " << typst_string(layout_case.author) << ",\n"
-          io << "  stamp: " << typst_string(layout_case.stamp) << ",\n"
-          io << "  font-id: " << typst_string(layout_case.font_id) << ",\n"
-          io << "  placement: " << typst_string(layout_case.placement) << ",\n"
-          io << "  lines: " << tuple_expr(layout_case.lines.map { |line| typst_string(line) }) << ",\n"
-          io << "  artifacts: " << tuple_expr(layout_case.artifacts.map { |item| "(kind: #{typst_string(item.kind)}, label: #{typst_string(item.label)})" }) << ",\n"
+          io << "  " << typst_string(layout_case.message) << ",\n"
           io << ")\n"
         end
-      end
-
-      private def tuple_expr(items : Array(String)) : String
-        return "()" if items.empty?
-        return "(#{items.first},)" if items.size == 1
-        "(#{items.join(", ")})"
       end
 
       private def typst_string(value : String) : String

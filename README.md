@@ -13,7 +13,7 @@ Initial Crystal scaffold for the Social Badge peer node.
 - Canonical Meshtastic envelope projection and HTTP peer relay queue/retry endpoints.
 - Explicit JSON request models for API payload validation.
 - Project-level `AGENTS.md` with coding workflow guidance.
-- Typst layout package + Crystal bit-exact PNG fixture checker.
+- Typst message-window layout package + Crystal bit-exact PNG fixture checker.
 
 See `docs/architecture-decisions.md` for implementation rationale.
 See `docs/protocol-implementation-notes.md` for ActivityPub/WebFinger and Meshtastic

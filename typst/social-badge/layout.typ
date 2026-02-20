@@ -62,56 +62,171 @@
   ]
 }
 
-#let render-badge(
-  lines: (),
-  artifacts: (),
-  trust: "UNVERIFIED",
-  author: "Demo Peer",
-  stamp: "now",
-  font-id: "nsm",
-  placement: "right",
+#let _first_capture(match, a, b: none) = {
+  let first = match.captures.at(a)
+  if first != none {
+    first
+  } else if b != none {
+    match.captures.at(b)
+  } else {
+    none
+  }
+}
+
+#let _trim_url(url) = {
+  if url.len() == 0 {
+    url
+  } else if (
+    url.ends-with(".") or
+    url.ends-with(",") or
+    url.ends-with("!") or
+    url.ends-with("?") or
+    url.ends-with(";") or
+    url.ends-with(":") or
+    url.ends-with(")") or
+    url.ends-with("]")
+  ) {
+    _trim_url(url.slice(0, url.len() - 1))
+  } else {
+    url
+  }
+}
+
+#let parse-message(
+  message,
+  default-font: "nsm",
+  default-placement: "right",
 ) = {
-  let profile = _layout_profile(placement)
-  let artifact-items = artifacts.slice(0, calc.min(profile.max_artifacts, artifacts.len()))
-  let artifact-spacing = if placement == "top" or placement == "bottom" { px(8) } else { px(8) }
+  let font-re = regex("^#font\\(\\s*(?:\"([A-Za-z0-9_-]+)\"|([A-Za-z0-9_-]+))\\s*\\)$")
+  let place-re = regex("^#place\\(\\s*(?:\"([A-Za-z]+)\"|([A-Za-z]+))\\s*\\)$")
+  let qr-re = regex("^#qr\\(\\s*\"([^\"]+)\"\\s*\\)$")
+  let event-re = regex("^#event\\(\\s*\"([^\"]+)\"\\s*,\\s*\"([^\"]+)\"(?:\\s*,\\s*\"([^\"]*)\")?\\s*\\)$")
+  let contact-re = regex("^#contact\\(\\s*\"([^\"]+)\"(?:\\s*,\\s*\"([^\"]*)\")?(?:\\s*,\\s*\"([^\"]*)\")?(?:\\s*,\\s*\"([^\"]*)\")?\\s*\\)$")
+  let url-re = regex("https?://[^\\s<>()\"'`]+")
 
-  set page(width: px(400), height: px(300), margin: 0pt)
-  box(width: px(400), height: px(300), inset: 0pt)[
-    #rect(width: px(400), height: px(300), fill: rgb("d9dfd8"), stroke: rgb("506357"), radius: px(4))
+  let lines = ()
+  let artifacts = ()
+  let seen = (:)
+  let settings = (font_id: default-font, placement: default-placement)
 
-    #place(top + left)[#rect(width: px(400), height: px(24), fill: rgb("eff3ef"), stroke: rgb("9bab9f"))]
-    #place(top + left, dy: px(264))[#rect(width: px(400), height: px(36), fill: rgb("eff3ef"), stroke: rgb("9bab9f"))]
+  for raw-line in message.split("\n") {
+    let line = raw-line.trim()
 
-    #place(top + left, dy: px(24))[#rect(width: px(40), height: px(240), fill: rgb("e4eae3"), stroke: rgb("9bab9f"))]
-    #place(top + left, dx: px(360), dy: px(24))[#rect(width: px(40), height: px(240), fill: rgb("e4eae3"), stroke: rgb("9bab9f"))]
+    let font-match = line.match(font-re)
+    if font-match != none {
+      let token = _first_capture(font-match, 0, b: 1)
+      if token != none {
+        settings.insert("font_id", token)
+      }
+      continue
+    }
 
-    #place(top + left, dx: px(40), dy: px(24))[#rect(width: px(320), height: px(240), fill: rgb("f8faf8"), stroke: rgb("9bab9f"))]
+    let place-match = line.match(place-re)
+    if place-match != none {
+      let place-token = _first_capture(place-match, 0, b: 1)
+      if place-token != none {
+        let candidate = place-token
+        if candidate == "float" or candidate == "auto" or candidate == "default" {
+          settings.insert("placement", "right")
+        } else if candidate == "off" or candidate == "hidden" {
+          settings.insert("placement", "none")
+        } else if candidate == "right" or candidate == "left" or candidate == "top" or candidate == "bottom" or candidate == "none" {
+          settings.insert("placement", candidate)
+        }
+      }
+      continue
+    }
 
-    #place(top + left, dx: px(8), dy: px(7))[
-      #set text(font: ("DejaVu Sans Mono"), size: px(11), fill: rgb("1f2520"))
-      #trust
-    ]
-    #place(top + left, dx: px(160), dy: px(7))[
-      #set text(font: ("DejaVu Sans Mono"), size: px(11), fill: rgb("1f2520"))
-      #author
-    ]
-    #place(top + left, dx: px(370), dy: px(7))[
-      #set text(font: ("DejaVu Sans Mono"), size: px(11), fill: rgb("1f2520"))
-      #stamp
-    ]
+    let qr-match = line.match(qr-re)
+    if qr-match != none {
+      let payload = _first_capture(qr-match, 0)
+      if payload != none {
+        let key = "qr::" + payload
+        if not (key in seen) {
+          seen.insert(key, true)
+          artifacts.push((kind: "qr", label: payload))
+        }
+      }
+      continue
+    }
 
-    #place(top + left, dx: px(48), dy: px(32))[
+    let event-match = line.match(event-re)
+    if event-match != none {
+      let title = _first_capture(event-match, 1)
+      if title != none {
+        let key = "event::" + title
+        if not (key in seen) {
+          seen.insert(key, true)
+          artifacts.push((kind: "event", label: title))
+        }
+      }
+      continue
+    }
+
+    let contact-match = line.match(contact-re)
+    if contact-match != none {
+      let name = _first_capture(contact-match, 0)
+      if name != none {
+        let key = "contact::" + name
+        if not (key in seen) {
+          seen.insert(key, true)
+          artifacts.push((kind: "contact", label: name))
+        }
+      }
+      continue
+    }
+
+    for url-match in raw-line.matches(url-re) {
+      let url = _trim_url(url-match.text)
+      if url.len() > 0 {
+        let key = "url::" + url
+        if not (key in seen) {
+          seen.insert(key, true)
+          artifacts.push((kind: "url", label: url))
+        }
+      }
+    }
+
+    lines.push(raw-line)
+  }
+
+  (
+    lines: lines,
+    artifacts: artifacts,
+    font_id: settings.at("font_id"),
+    placement: settings.at("placement"),
+  )
+}
+
+#let render-message-window(
+  message,
+  default-font: "nsm",
+  default-placement: "right",
+) = {
+  let parsed = parse-message(
+    message,
+    default-font: default-font,
+    default-placement: default-placement,
+  )
+  let profile = _layout_profile(parsed.placement)
+  let artifact-items = parsed.artifacts.slice(0, calc.min(profile.max_artifacts, parsed.artifacts.len()))
+  let artifact-spacing = px(8)
+
+  set page(width: px(320), height: px(240), margin: 0pt)
+  box(width: px(320), height: px(240), inset: 0pt)[
+    #rect(width: px(320), height: px(240), fill: rgb("f8faf8"))
+    #place(top + left, dx: px(8), dy: px(8))[
       #box(width: px(304), height: px(224), inset: 0pt)[
         #place(top + left, dx: profile.text_x, dy: profile.text_y)[
           #box(width: profile.text_w, height: profile.text_h, inset: 0pt)[
-            #_content_lines(lines, font-id, profile.max_lines)
+            #_content_lines(parsed.lines, parsed.font_id, profile.max_lines)
           ]
         ]
         #if artifact-items.len() > 0 and profile.max_artifacts > 0 [
           #place(top + left, dx: profile.artifacts_x, dy: profile.artifacts_y)[
             #box(width: profile.artifacts_w, height: profile.artifacts_h, inset: 0pt)[
               #stack(
-                dir: if placement == "top" or placement == "bottom" { ltr } else { ttb },
+                dir: if parsed.placement == "top" or parsed.placement == "bottom" { ltr } else { ttb },
                 spacing: artifact-spacing,
                 ..artifact-items.map(item => _artifact_box(item, show-caption: profile.show_caption))
               )
@@ -119,11 +234,6 @@
           ]
         ]
       ]
-    ]
-
-    #place(top + left, dx: px(165), dy: px(277))[
-      #set text(font: ("DejaVu Sans Mono"), size: px(11), fill: rgb("1f2520"))
-      [fixed 320x240]
     ]
   ]
 }

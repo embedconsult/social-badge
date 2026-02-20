@@ -72,7 +72,7 @@ module SocialBadge
         {error: ex.message}.to_json
       rescue ex : TypstPreviewService::RenderError
         env.response.status_code = 500
-        {error: "Preview render failed"}.to_json
+        {error: ex.message}.to_json
       end
 
       get "/api/peer/outbound_queue" do |env|

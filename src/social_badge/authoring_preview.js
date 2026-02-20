@@ -44,6 +44,7 @@
   const input = document.getElementById("message-input");
   const charCount = document.getElementById("char-count");
   const publishStatus = document.getElementById("publish-status");
+  const previewStatus = document.getElementById("preview-status");
   const publishBtn = document.getElementById("publish-btn");
   const typstRender = document.getElementById("typst-render");
   const messageBox = document.getElementById("message-box");
@@ -52,7 +53,7 @@
   const authorChip = document.getElementById("author-chip");
   const trustChip = document.getElementById("trust-chip");
 
-  if (!input || !charCount || !publishStatus || !publishBtn || !typstRender || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip) {
+  if (!input || !charCount || !publishStatus || !previewStatus || !publishBtn || !typstRender || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip) {
     return;
   }
 
@@ -528,6 +529,7 @@
 
     if (!messageBody.trim()) {
       typstRender.innerHTML = "";
+      previewStatus.textContent = "";
       return;
     }
 
@@ -540,7 +542,13 @@
       });
 
       if (!response.ok) {
-        if (requestId === previewRequestId) typstRender.innerHTML = "";
+        const errorPayload = await response.json().catch(function () {
+          return {error: "Preview render failed"};
+        });
+        if (requestId === previewRequestId) {
+          typstRender.innerHTML = "";
+          previewStatus.textContent = errorPayload.error || "Preview render failed";
+        }
         return;
       }
 
@@ -551,10 +559,14 @@
       if (requestId === previewRequestId) {
         const svg = typeof payload.svg === "string" ? payload.svg : "";
         typstRender.innerHTML = svg;
+        previewStatus.textContent = "";
       }
     } catch (error) {
       if (error && error.name === "AbortError") return;
-      if (requestId === previewRequestId) typstRender.innerHTML = "";
+      if (requestId === previewRequestId) {
+        typstRender.innerHTML = "";
+        previewStatus.textContent = "Preview render failed";
+      }
     } finally {
       if (requestId === previewRequestId) previewAbortController = null;
     }

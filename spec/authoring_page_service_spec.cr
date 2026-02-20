@@ -28,6 +28,7 @@ describe SocialBadge::AuthoringPageService do
     html.should contain("#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)")
     html.should contain("id=\"message-artifacts\"")
     html.should contain("id=\"typst-render\"")
+    html.should contain("id=\"preview-status\"")
     html.should contain("fixed 320x240")
     html.should contain("id=\"preview-config\"")
     html.should contain("Noto Sans Mono")

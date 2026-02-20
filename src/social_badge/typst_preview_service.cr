@@ -261,7 +261,9 @@ module SocialBadge
       unless status.success?
         err = error.to_s
         err = output.to_s if err.empty?
-        raise RenderError.new(err.empty? ? "Preview render failed" : err)
+        first_line = err.lines.first?.try(&.strip) || ""
+        detail = first_line.empty? ? "Preview render failed" : "Preview render failed: #{first_line}"
+        raise RenderError.new(detail)
       end
 
       File.read(svg_path)

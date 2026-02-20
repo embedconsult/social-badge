@@ -182,6 +182,13 @@ module SocialBadge
             min-height: 1.3em;
           }
 
+          .preview-status {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #7a2d2d;
+            min-height: 1.2em;
+          }
+
           .badge-frame {
             width: 400px;
             height: 300px;
@@ -457,6 +464,7 @@ module SocialBadge
           <section class="card">
             <h1>320x240 Preview</h1>
             <p>Message viewport is fixed at 320x240. Trust stays in chrome metadata only.</p>
+            <div class="preview-status" id="preview-status"></div>
             <div class="badge-frame" aria-label="badge-preview">
               <div class="chrome-top">
                 <span id="trust-chip">UNVERIFIED</span>

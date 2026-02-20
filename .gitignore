@@ -3,3 +3,5 @@
 /.crystal/
 /tmp/
 /bin/
+/testdata/typst/out/*.png
+/testdata/typst/out/*.typ

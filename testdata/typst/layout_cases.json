@@ -1,0 +1,91 @@
+{
+  "render_spec_version": "msg_320x240_v1",
+  "cases": [
+    {
+      "id": "qr_only_right",
+      "description": "Single QR directive artifact in right-float layout.",
+      "font_id": "nsm",
+      "placement": "right",
+      "trust": "UNVERIFIED",
+      "author": "Demo Peer",
+      "stamp": "now",
+      "lines": [],
+      "artifacts": [
+        {
+          "kind": "qr",
+          "label": "https://bbb.io/badge"
+        }
+      ],
+      "expected_sha256": "5a665b17f97e21f4ab15fb1e97514a2ba406e430694394f39ef3a3f405d6cc64"
+    },
+    {
+      "id": "qr_only_left",
+      "description": "Single QR directive artifact in left-float layout.",
+      "font_id": "nsm",
+      "placement": "left",
+      "trust": "UNVERIFIED",
+      "author": "Demo Peer",
+      "stamp": "now",
+      "lines": [],
+      "artifacts": [
+        {
+          "kind": "qr",
+          "label": "https://bbb.io/badge"
+        }
+      ],
+      "expected_sha256": "1f9d9de9fc3b00e90ed278c54e112c32501053dc99e5cf3ea99fbe16cf20aabb"
+    },
+    {
+      "id": "text_only_serif",
+      "description": "Text-only content with serif profile.",
+      "font_id": "ser",
+      "placement": "none",
+      "trust": "UNVERIFIED",
+      "author": "Demo Peer",
+      "stamp": "now",
+      "lines": [
+        "Social Badge v1",
+        "Line 2: typesetting test.",
+        "Line 3: 320x240 hard limits.",
+        "Line 4: trust in chrome only.",
+        "Line 5: copy/paste text output."
+      ],
+      "artifacts": [],
+      "expected_sha256": "a44e26ffcaa81509da521a8cea7b8aa9336529b5130bb3eac3e0bf1bd19c748e"
+    },
+    {
+      "id": "top_three_artifacts",
+      "description": "Top placement clips to three artifact slots with text region below.",
+      "font_id": "ns",
+      "placement": "top",
+      "trust": "UNVERIFIED",
+      "author": "Demo Peer",
+      "stamp": "now",
+      "lines": [
+        "Agenda",
+        "- Bring badge",
+        "- Scan QR",
+        "- Sync peer"
+      ],
+      "artifacts": [
+        {
+          "kind": "url",
+          "label": "https://beagleboard.org"
+        },
+        {
+          "kind": "event",
+          "label": "Social Badge Meetup"
+        },
+        {
+          "kind": "contact",
+          "label": "Demo Peer"
+        },
+        {
+          "kind": "qr",
+          "label": "https://bbb.io/overflow"
+        }
+      ],
+      "expected_sha256": "87f0a4dcbfdd3141cd299c2f67aefda722efa13fc270c5af266bf2a72a98c010"
+    }
+  ]
+}

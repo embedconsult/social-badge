@@ -161,3 +161,9 @@ Notes:
 2. Rich HTML layout features
 3. Large inline media rendering
 4. Automatic summarization or rewriting during render
+
+## Bit-exact fixture source
+
+Use the Typst package at `typst/social-badge/layout.typ` plus
+`scripts/check_typst_layouts.cr` to produce and verify deterministic PNG
+fixtures for regression checks.

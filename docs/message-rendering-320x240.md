@@ -44,12 +44,15 @@ All coordinates are absolute pixels inside the `320x240` window.
 ## Typst-style message directives (non-printing)
 
 1. `#font("nsm"|"ns"|"ser"|"atk"|"ibm")`
-2. `#place("right"|"left"|"top"|"bottom"|"none")`
+2. `#place(loc)[content]` where `loc` uses Typst-style alignment tokens (`left`, `right`, `top`, `bottom`, `center`, `none`) joined with `+`
 3. `#qr("https://example.com")`
 4. `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
 5. `#contact("Name", "phone", "email", "https://url")`
 
-Directive lines do not render as message text lines.
+Example:
+`#place(bottom + right)[#qr("https://bbb.io/badge")]`
+
+Directive content is control-only and does not consume message text lines.
 
 ## Placement profiles
 
@@ -77,6 +80,12 @@ Directive lines do not render as message text lines.
 - text rect `x=0, y=0, w=304, h=224`
 - no artifact rect
 - max artifacts: `0`
+
+Location expression mapping:
+
+1. If `left` or `right` is present, use side profile (`left` or `right`), with optional `top|bottom|center` vertical alignment for artifacts.
+2. Else if `top` or `bottom` is present, use row profile (`top` or `bottom`), with optional `left|right|center` horizontal alignment for artifacts.
+3. `none` disables artifact rendering.
 
 ## Parsing and shaping phases
 

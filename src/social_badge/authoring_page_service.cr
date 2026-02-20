@@ -98,12 +98,6 @@ module SocialBadge
             letter-spacing: 0.01em;
           }
 
-          h2 {
-            margin: 0;
-            font-size: 1.06rem;
-            letter-spacing: 0.01em;
-          }
-
           p {
             margin: 0 0 12px;
             color: var(--muted);
@@ -287,6 +281,7 @@ module SocialBadge
           .message-artifacts {
             display: none;
             align-content: start;
+            justify-content: start;
             gap: 8px;
             overflow: hidden;
           }
@@ -355,8 +350,7 @@ module SocialBadge
 
           .message-artifact-inline {
             width: 96px;
-            display: grid;
-            gap: 3px;
+            height: 96px;
             margin: 0;
           }
 
@@ -365,20 +359,6 @@ module SocialBadge
             height: 96px;
             border: 1px solid #c6cec7;
             background: #fff;
-          }
-
-          .message-artifact-inline figcaption {
-            margin: 0;
-            font: 10px/1.2 "Menlo", "SFMono-Regular", "Consolas", monospace;
-            color: #4b5e54;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .message-box.with-artifacts-top .message-artifact-inline figcaption,
-          .message-box.with-artifacts-bottom .message-artifact-inline figcaption {
-            display: none;
           }
 
           .line {
@@ -424,58 +404,6 @@ module SocialBadge
             text-underline-offset: 2px;
           }
 
-          .artifact-panel {
-            margin-top: 14px;
-            border-top: 1px solid var(--edge);
-            padding-top: 12px;
-          }
-
-          .artifact-panel p {
-            margin-top: 6px;
-            margin-bottom: 10px;
-          }
-
-          .artifact-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-          }
-
-          .artifact-card {
-            border: 1px solid var(--edge);
-            border-radius: 8px;
-            background: #f9fbf9;
-            padding: 8px;
-            display: grid;
-            gap: 8px;
-          }
-
-          .artifact-kind {
-            font: 11px/1 "Menlo", "SFMono-Regular", "Consolas", monospace;
-            letter-spacing: 0.03em;
-            color: #456657;
-            text-transform: uppercase;
-          }
-
-          .artifact-title {
-            font-weight: 700;
-            font-size: 0.92rem;
-            line-height: 1.2;
-            color: #1f2520;
-          }
-
-          .artifact-code {
-            width: 96px;
-            height: 96px;
-            border: 1px solid var(--edge);
-            background: #fff;
-          }
-
-          .artifact-empty {
-            color: var(--muted);
-            font-size: 0.92rem;
-          }
-
           .note {
             margin-top: 10px;
             font-size: 0.95rem;
@@ -504,13 +432,13 @@ module SocialBadge
             <p class="note">Hard limits: 280 chars and a single 320x240 frame. Overflow is rejected (no next page).</p>
             <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. Typst-style control directives are non-printing: <code>#font(...)</code>, <code>#place(...)</code>, <code>#qr(...)</code>, <code>#event(...)</code>, <code>#contact(...)</code>.</p>
             <p class="note">Font is message-defined. Short IDs: <code>nsm</code>, <code>ns</code>, <code>ser</code>, <code>atk</code>, <code>ibm</code>. Example: <code>#font(&quot;nsm&quot;)</code>.</p>
-            <p class="note">Layout defaults to right float. Placement options: <code>#place(&quot;right&quot;)</code>, <code>#place(&quot;left&quot;)</code>, <code>#place(&quot;top&quot;)</code>, <code>#place(&quot;bottom&quot;)</code>, <code>#place(&quot;none&quot;)</code>.</p>
-            <p class="note">Examples: <code>#qr(&quot;https://beagleboard.org&quot;)</code>, <code>#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)</code>, <code>#contact(&quot;Name&quot;, &quot;+1-555-0100&quot;, &quot;name@example.com&quot;, &quot;https://example.com&quot;)</code>.</p>
+            <p class="note">Placement accepts Typst-style locations. Default is right float. Example: <code>#place(bottom + right)[#qr(&quot;https://bbb.io/badge&quot;)]</code>.</p>
+            <p class="note">More examples: <code>#qr(&quot;https://beagleboard.org&quot;)</code>, <code>#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)</code>, <code>#contact(&quot;Name&quot;, &quot;+1-555-0100&quot;, &quot;name@example.com&quot;, &quot;https://example.com&quot;)</code>.</p>
           </section>
 
           <section class="card">
             <h1>320x240 Preview</h1>
-            <p>Top/bottom bars are chrome. Trust is shown in chrome only.</p>
+            <p>Message viewport is fixed at 320x240. Trust stays in chrome metadata only.</p>
             <div class="badge-frame" aria-label="badge-preview">
               <div class="chrome-top">
                 <span id="trust-chip">UNVERIFIED</span>
@@ -528,12 +456,6 @@ module SocialBadge
                 <span>fixed 320x240</span>
               </div>
             </div>
-
-            <section class="artifact-panel">
-              <h2>QR Artifacts</h2>
-              <p>Generated from URLs, calendar entries, and contact cards.</p>
-              <div class="artifact-list" id="artifact-list"></div>
-            </section>
           </section>
         </div>
 

@@ -3,27 +3,31 @@
   "cases": [
     {
       "id": "qr_only_right",
-      "description": "Single QR directive artifact in default right-float layout.",
-      "message": "#qr(\"https://bbb.io/badge\")",
-      "expected_sha256": "b03429a11c03d9c2b2d1a3f3c85ea36ac07745da4fea5ec58bf709dfeea7b25d"
+      "description": "Single QR placed in bottom-right with Typst-style content.",
+      "message_typst": "#place(bottom + right)[#qr(\"https://bbb.io/badge\")]",
+      "font_id": "nsm",
+      "expected_sha256": "0935910edf44a0ea0ce5a6c0e5bb2aa5c2f4c0ca4ab08f6a8fa9ef74681c3c63"
     },
     {
       "id": "qr_only_left",
-      "description": "Single QR directive artifact in left-float layout.",
-      "message": "#place(\"left\")\n#qr(\"https://bbb.io/badge\")",
-      "expected_sha256": "577d1889254e8bff0eab076101b5fb76fefe08102fd53aa49fc75d610a0de418"
+      "description": "Single QR placed in top-left with Typst-style content.",
+      "message_typst": "#place(top + left)[#qr(\"https://bbb.io/badge\")]",
+      "font_id": "nsm",
+      "expected_sha256": "bb17c5bc46da435e7e361ed3a829e3464621c0b31563cf8225126e8180f964fb"
     },
     {
-      "id": "text_only_serif",
-      "description": "Text-only content with message-defined serif profile.",
-      "message": "#font(\"ser\")\nSocial Badge v1\nLine 2: typesetting test.\nLine 3: 320x240 hard limits.\nLine 4: trust in chrome only.\nLine 5: copy/paste text output.",
-      "expected_sha256": "f48cb4dca5235efecb7158588c750725a9648a44749424aa4b6392b7704784c5"
+      "id": "text_only_mono",
+      "description": "Text-only message block.",
+      "message_typst": "Social Badge v1\nLine 2: typesetting test.\nLine 3: 320x240 hard limits.\nLine 4: copy/paste text output.",
+      "font_id": "nsm",
+      "expected_sha256": "6e155996bf47bf230815bf540fc7588761e7e1995fb1ba4c9f5d6b35a0e26987"
     },
     {
-      "id": "top_three_artifacts",
-      "description": "Top placement clips to three artifact slots with text region below.",
-      "message": "#font(\"ns\")\n#place(\"top\")\nAgenda\n- Bring badge\n- Scan QR\n- Sync peer\nhttps://beagleboard.org\n#event(\"2026-03-01 18:30\", \"Social Badge Meetup\", \"Lab\")\n#contact(\"Demo Peer\", \"+1-555-0100\", \"demo@example.com\", \"https://bbb.io/contact\")\n#qr(\"https://bbb.io/overflow\")",
-      "expected_sha256": "1a9fbde22dfb789b2772e9594e45bd56d4d2be6beb4dbf708915e24b376e008f"
+      "id": "text_and_qr",
+      "description": "Paragraph text with one QR aligned right.",
+      "message_typst": "Agenda\\\n- Bring badge\\\n- Scan QR\\\n- Sync peer\n#place(right)[#qr(\"https://bbb.io/badge\")]",
+      "font_id": "ns",
+      "expected_sha256": "fe9b7e1bb72c80cb8a5ea25e346bcd3befd6c55075ba06052bdc5b1c65dca09d"
     }
   ]
 }

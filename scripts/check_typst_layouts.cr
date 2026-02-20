@@ -19,8 +19,11 @@ module SocialBadge
       @[JSON::Field(default: "")]
       getter description : String = ""
 
-      @[JSON::Field(default: "")]
-      getter message : String = ""
+      @[JSON::Field(key: "message_typst", default: "")]
+      getter message_typst : String = ""
+
+      @[JSON::Field(key: "font_id", default: "nsm")]
+      getter font_id : String = "nsm"
 
       @[JSON::Field(key: "expected_sha256")]
       property expected_sha256 : String?
@@ -136,10 +139,10 @@ module SocialBadge
         layout_path = File.join(ROOT_DIR, "typst/social-badge/layout.typ")
         import_path = Path[layout_path].relative_to(Path[File.dirname(typ_path)]).to_s
         String.build do |io|
-          io << "#import " << typst_string(import_path) << ": " << DEFAULT_RENDER_FN << "\n\n"
-          io << "#" << DEFAULT_RENDER_FN << "(\n"
-          io << "  " << typst_string(layout_case.message) << ",\n"
-          io << ")\n"
+          io << "#import " << typst_string(import_path) << ": " << DEFAULT_RENDER_FN << ", place, qr\n\n"
+          io << "#" << DEFAULT_RENDER_FN << "(font_id: " << typst_string(layout_case.font_id) << ")[\n"
+          io << layout_case.message_typst
+          io << "\n]\n"
         end
       end
 

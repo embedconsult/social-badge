@@ -16,19 +16,25 @@ Use `render-message-window(...)` from `typst/social-badge/layout.typ`.
 
 Parameters:
 
-1. `message` raw authored text (including Typst-style control directives).
-2. Optional defaults for `default-font` and `default-placement`.
+1. `body` content block containing Typst-authored message layout.
+2. Optional `font_id` (`nsm`, `ns`, `ser`, `atk`, `ibm`).
 
 The package renders only the message window (`320x240`) with a fixed `8px` inset
 content box (`304x224`).
 
-Supported non-printing directives inside `message`:
+Built-in helpers exported by the package:
 
-1. `#font("nsm"|"ns"|"ser"|"atk"|"ibm")`
-2. `#place("right"|"left"|"top"|"bottom"|"none")`
-3. `#qr("https://...")`
-4. `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
-5. `#contact("Name", "phone", "email", "https://url")`
+1. `#place(loc)[content]` for alignment within the message window content box.
+2. `#qr("https://...")` for compact QR glyph rendering (glyph only, no caption text).
+
+Example:
+
+```typst
+#import "../../../typst/social-badge/layout.typ": render-message-window, place, qr
+#render-message-window(font_id: "nsm")[
+  #place(bottom + right)[#qr("https://bbb.io/badge")]
+]
+```
 
 ## Running checks
 

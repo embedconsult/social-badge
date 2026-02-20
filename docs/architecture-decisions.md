@@ -60,14 +60,14 @@ typesetting reference. The badge LVGL path should consume deterministic
 `320x240` image artifacts produced from the same layout contract, while web
 output preserves selectable/copyable text.
 
-## Authoring preview supports structured QR artifacts
+## Authoring preview supports Typst-style placement blocks
 
-The web composer recognizes URLs and Typst-style directives (`#place(...)`,
-`#font(...)`, `#qr(...)`, `#event(...)`, `#contact(...)`) as artifact/layout controls.
+The web composer recognizes URLs and Typst-style directives (`#font(...)`,
+`#place(...)[...]`, `#qr(...)`, `#event(...)`, `#contact(...)`) as layout controls.
 Typst directives are non-printing in the body layout so control syntax does not
-consume message viewport lines. Inline artifact placement defaults to right-float
-and can be explicitly set with `#place("right"|"left"|"top"|"bottom"|"none")`.
-Font selection is message-defined via short IDs to keep rendering inputs fully
+consume message viewport lines. Artifact placement defaults to right-float and
+can be overridden per block (for example `#place(bottom + right)[#qr(\"...\")]`).
+Font selection is message-defined via short IDs so rendering inputs remain
 self-contained in the message payload. Rendering uses a hard single-page 320x240
 limit with no pagination fallback; overflow must be corrected at author time.
 

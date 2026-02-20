@@ -11,8 +11,8 @@
 
   const MAX_CHARS = config.max_chars || 280;
   const BASE_CONTENT_WIDTH = 304;
-  const PLACEMENT_DEFAULT = "right";
-  const PLACEMENT_NONE = "none";
+  const PLACEMENT_DEFAULT = {profile: "right", alignX: "end", alignY: "start"};
+  const PLACEMENT_NONE = {profile: "none", alignX: "start", alignY: "start"};
   const ARTIFACT_PLACEMENT_CLASSES = [
     "with-artifacts-right",
     "with-artifacts-left",
@@ -26,7 +26,16 @@
     top: {placementClass: "with-artifacts-top", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, maxArtifacts: 3},
     bottom: {placementClass: "with-artifacts-bottom", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, maxArtifacts: 3},
   };
+  const MAX_ARTIFACTS_TOTAL = 8;
   const FONT_SIZE = 16;
+
+  const FONT_DIRECTIVE_RE = /#font\(\s*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z0-9_-]+))\s*\)/g;
+  const PLACE_BLOCK_RE = /#place\(\s*([^)]*?)\s*\)\s*\[([\s\S]*?)\]/g;
+  const PLACE_DIRECTIVE_RE = /#place\(\s*([^)]*?)\s*\)/g;
+  const QR_DIRECTIVE_RE = /#qr\(\s*"((?:[^"\\]|\\.)*)"\s*\)/g;
+  const EVENT_DIRECTIVE_RE = /#event\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"(?:\s*,\s*"((?:[^"\\]|\\.)*)")?\s*\)/g;
+  const CONTACT_DIRECTIVE_RE = /#contact\(\s*"((?:[^"\\]|\\.)*)"(?:\s*,\s*"((?:[^"\\]|\\.)*)")?(?:\s*,\s*"((?:[^"\\]|\\.)*)")?(?:\s*,\s*"((?:[^"\\]|\\.)*)")?\s*\)/g;
+
   const authorName = config.author_name || "Demo Peer";
   const trustLevel = config.trust_level || "UNVERIFIED";
   const fontProfiles = Array.isArray(config.font_profiles) ? config.font_profiles : [];
@@ -41,9 +50,8 @@
   const messageArtifacts = document.getElementById("message-artifacts");
   const authorChip = document.getElementById("author-chip");
   const trustChip = document.getElementById("trust-chip");
-  const artifactList = document.getElementById("artifact-list");
 
-  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip || !artifactList) {
+  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip) {
     return;
   }
 
@@ -55,6 +63,14 @@
 
   let currentLayoutState = {overflowLines: 0, overflowArtifacts: 0, overflowChars: 0};
 
+  function clonePlacement(placement) {
+    return {
+      profile: placement.profile,
+      alignX: placement.alignX,
+      alignY: placement.alignY,
+    };
+  }
+
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
@@ -64,7 +80,7 @@
 
   function compactLabel(text, maxLen) {
     if (text.length <= maxLen) return text;
-    return text.slice(0, Math.max(0, maxLen - 1)) + "…";
+    return text.slice(0, Math.max(0, maxLen - 1)) + "...";
   }
 
   function findFontProfile(profileId) {
@@ -145,13 +161,13 @@
 
       const maxWidth = wrapWidth - measure(currentPrefix);
       const chunks = splitLongToken(part.replace(/^\s+/, ""), maxWidth);
-      chunks.forEach(function (chunk, index) {
+      chunks.forEach(function (chunkText, index) {
         if (index === 0) {
-          current += chunk;
+          current += chunkText;
         } else {
           wrappedLines.push(current);
           currentPrefix = continuationPrefix;
-          current = continuationPrefix + chunk;
+          current = continuationPrefix + chunkText;
         }
       });
     });
@@ -166,59 +182,204 @@
     return {datePart: match[1], timePart: match[2] || "09:00"};
   }
 
-  function parseTypstPlaceDirective(line) {
-    const placeMatch = line.match(/^#place\(\s*(?:"([A-Za-z]+)"|([A-Za-z]+))\s*\)$/);
-    if (!placeMatch) return null;
-
-    const raw = (placeMatch[1] || placeMatch[2] || "").toLowerCase();
-    if (raw === "float" || raw === "auto" || raw === "default") return PLACEMENT_DEFAULT;
-    if (raw === "off" || raw === "hidden") return PLACEMENT_NONE;
-    if (raw === "right" || raw === "left" || raw === "top" || raw === "bottom" || raw === PLACEMENT_NONE) return raw;
-    return null;
+  function unescapeTypst(value) {
+    return value
+      .replace(/\\n/g, "\n")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
   }
 
-  function parseTypstQrDirective(line) {
-    return line.match(/^#qr\(\s*"([^"]+)"\s*\)$/);
+  function parsePlaceExpression(raw) {
+    let expr = String(raw || "").trim();
+    if ((expr.startsWith('"') && expr.endsWith('"')) || (expr.startsWith("'") && expr.endsWith("'"))) {
+      expr = expr.slice(1, -1);
+    }
+
+    const tokens = expr
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .split("+")
+      .filter(function (token) {
+        return token.length > 0;
+      });
+
+    const has = function (token) {
+      return tokens.indexOf(token) >= 0;
+    };
+
+    if (has("none") || has("off") || has("hidden")) return clonePlacement(PLACEMENT_NONE);
+
+    let profile = PLACEMENT_DEFAULT.profile;
+    if (has("left")) {
+      profile = "left";
+    } else if (has("right")) {
+      profile = "right";
+    } else if (has("top")) {
+      profile = "top";
+    } else if (has("bottom")) {
+      profile = "bottom";
+    }
+
+    let alignX = has("right") ? "end" : has("center") ? "center" : "start";
+    let alignY = has("bottom") ? "end" : has("center") ? "center" : "start";
+
+    if (profile === "left") alignX = "start";
+    if (profile === "right") alignX = "end";
+
+    return {profile: profile, alignX: alignX, alignY: alignY};
   }
 
-  function parseTypstEventDirective(line) {
-    return line.match(/^#event\(\s*"([^"]+)"\s*,\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?\s*\)$/);
+  function buildEventPayload(datePart, timePart, title, location) {
+    const compactDate = datePart.replace(/-/g, "");
+    const compactTime = (timePart || "09:00").replace(":", "") + "00";
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "DTSTART:" + compactDate + "T" + compactTime,
+      "SUMMARY:" + title,
+    ];
+
+    if (location && location.length > 0) lines.push("LOCATION:" + location);
+    lines.push("END:VEVENT");
+    lines.push("END:VCALENDAR");
+    return lines.join("\n");
   }
 
-  function parseTypstContactDirective(line) {
-    return line.match(/^#contact\(\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?\s*\)$/);
+  function buildContactPayload(name, phone, email, url) {
+    const lines = ["BEGIN:VCARD", "VERSION:3.0", "FN:" + name];
+    if (phone && phone.length > 0) lines.push("TEL:" + phone);
+    if (email && email.length > 0) lines.push("EMAIL:" + email);
+    if (url && url.length > 0) lines.push("URL:" + url);
+    lines.push("END:VCARD");
+    return lines.join("\n");
   }
 
-  function parseTypstFontDirective(line) {
-    return line.match(/^#font\(\s*(?:"([A-Za-z0-9_-]+)"|([A-Za-z0-9_-]+))\s*\)$/);
+  function cleanUrl(raw) {
+    return raw.replace(/[.,!?;:)\]]+$/g, "");
   }
 
-  function isTypstControlLine(line) {
-    return !!(parseTypstPlaceDirective(line) || parseTypstQrDirective(line) || parseTypstEventDirective(line) || parseTypstContactDirective(line) || parseTypstFontDirective(line));
+  function pushArtifact(state, kind, title, payload, placement) {
+    if (!payload || payload.length === 0) return;
+    if (state.artifacts.length >= MAX_ARTIFACTS_TOTAL) return;
+
+    const key = payload;
+    if (state.seen.has(key)) return;
+    state.seen.add(key);
+
+    state.artifacts.push({
+      kind: kind,
+      title: title,
+      payload: payload,
+      placement: clonePlacement(placement),
+    });
   }
 
-  function detectFont(normalizedText) {
+  function collectControlArtifacts(text, placement, state) {
+    let working = text;
+
+    working = working.replace(QR_DIRECTIVE_RE, function (_, rawUrl) {
+      const url = cleanUrl(unescapeTypst(rawUrl));
+      pushArtifact(state, "qr", compactLabel(url, 28), url, placement);
+      return "";
+    });
+
+    working = working.replace(EVENT_DIRECTIVE_RE, function (_, rawDateTime, rawTitle, rawLocation) {
+      const dateTime = unescapeTypst(rawDateTime);
+      const title = unescapeTypst(rawTitle);
+      const location = rawLocation ? unescapeTypst(rawLocation) : "";
+      const parsed = parseTypstDateTime(dateTime);
+      const datePart = parsed ? parsed.datePart : "1970-01-01";
+      const timePart = parsed ? parsed.timePart : "09:00";
+      const payload = buildEventPayload(datePart, timePart, title, location);
+      pushArtifact(state, "event", compactLabel(title, 28), payload, placement);
+      return "";
+    });
+
+    working = working.replace(CONTACT_DIRECTIVE_RE, function (_, rawName, rawPhone, rawEmail, rawUrl) {
+      const name = unescapeTypst(rawName);
+      const phone = rawPhone ? unescapeTypst(rawPhone) : "";
+      const email = rawEmail ? unescapeTypst(rawEmail) : "";
+      const url = rawUrl ? unescapeTypst(rawUrl) : "";
+      const payload = buildContactPayload(name, phone, email, url);
+      pushArtifact(state, "contact", compactLabel(name, 28), payload, placement);
+      return "";
+    });
+
+    return working;
+  }
+
+  function collectUrlsFromText(text, placement, state) {
+    if (placement.profile === "none") return;
+
+    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+    const rawUrlRegex = /https?:\/\/[^\s<>()"'`]+/g;
+
+    mdLinkRegex.lastIndex = 0;
+    rawUrlRegex.lastIndex = 0;
+
+    let mdMatch;
+    while ((mdMatch = mdLinkRegex.exec(text)) !== null) {
+      const url = cleanUrl(mdMatch[2]);
+      pushArtifact(state, "url", compactLabel(mdMatch[1], 28), url, placement);
+    }
+
+    let rawMatch;
+    while ((rawMatch = rawUrlRegex.exec(text)) !== null) {
+      const url = cleanUrl(rawMatch[0]);
+      pushArtifact(state, "url", compactLabel(url, 28), url, placement);
+    }
+  }
+
+  function cleanupRenderableText(text) {
+    return text
+      .split("\n")
+      .map(function (line) {
+        return line.replace(/\s+$/g, "");
+      })
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/^\n+/, "")
+      .replace(/\n+$/, "");
+  }
+
+  function parseMessageModel(normalizedText) {
+    let working = normalizedText;
     let fontToken = defaultFontId;
-    normalizedText.split("\n").forEach(function (rawLine) {
-      const line = rawLine.trim();
-      const match = parseTypstFontDirective(line);
-      if (match) fontToken = match[1] || match[2];
-    });
-    return fontToken;
-  }
+    let placement = clonePlacement(PLACEMENT_DEFAULT);
+    const state = {artifacts: [], seen: new Set()};
 
-  function detectPlacement(normalizedText) {
-    let placement = PLACEMENT_DEFAULT;
-    normalizedText.split("\n").forEach(function (rawLine) {
-      const line = rawLine.trim();
-      const candidate = parseTypstPlaceDirective(line);
-      if (candidate) placement = candidate;
+    working = working.replace(FONT_DIRECTIVE_RE, function (_, quotedToken, bareToken) {
+      const token = quotedToken ? unescapeTypst(quotedToken) : (bareToken || "");
+      if (token.length > 0) fontToken = token;
+      return "";
     });
-    return placement;
+
+    working = working.replace(PLACE_BLOCK_RE, function (_, rawPlace, body) {
+      const blockPlacement = parsePlaceExpression(rawPlace);
+      placement = blockPlacement;
+      collectControlArtifacts(body, blockPlacement, state);
+      return "";
+    });
+
+    working = working.replace(PLACE_DIRECTIVE_RE, function (_, rawPlace) {
+      placement = parsePlaceExpression(rawPlace);
+      return "";
+    });
+
+    working = collectControlArtifacts(working, placement, state);
+    collectUrlsFromText(working, placement, state);
+
+    return {
+      fontToken: fontToken,
+      placement: placement,
+      artifacts: state.artifacts,
+      visibleText: cleanupRenderableText(working),
+    };
   }
 
   function parseBlocks(normalizedText) {
-    const lines = normalizedText.split("\n");
+    const lines = normalizedText.length > 0 ? normalizedText.split("\n") : [""];
     const blocks = [];
     let inCodeFence = false;
 
@@ -230,28 +391,6 @@
 
       if (inCodeFence) {
         blocks.push({className: "code", text: rawLine, inline: false, firstPrefix: "", continuationPrefix: ""});
-        return;
-      }
-
-      const line = rawLine.trim();
-      if (isTypstControlLine(line)) {
-        return;
-      }
-
-      const eventMatch = rawLine.match(/^@event\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?\s*\|\s*([^|]+?)(?:\s*\|\s*(.+))?$/);
-      if (eventMatch) {
-        const label = "EVENT " + eventMatch[1] + " " + (eventMatch[2] || "09:00") + " " + eventMatch[3].trim();
-        const withLocation = eventMatch[4] ? label + " @ " + eventMatch[4].trim() : label;
-        blocks.push({className: "table", text: withLocation, inline: true, firstPrefix: "", continuationPrefix: "  "});
-        return;
-      }
-
-      const contactMatch = rawLine.match(/^@contact\s+([^|]+?)(?:\s*\|\s*([^|]*))?(?:\s*\|\s*([^|]*))?(?:\s*\|\s*(\S+))?$/);
-      if (contactMatch) {
-        const segments = [contactMatch[1].trim()];
-        if (contactMatch[2] && contactMatch[2].trim().length > 0) segments.push(contactMatch[2].trim());
-        if (contactMatch[3] && contactMatch[3].trim().length > 0) segments.push(contactMatch[3].trim());
-        blocks.push({className: "table", text: "CONTACT " + segments.join(" | "), inline: true, firstPrefix: "", continuationPrefix: "  "});
         return;
       }
 
@@ -268,13 +407,13 @@
       }
 
       if (/^(\*\*\*+|---+|___+)\s*$/.test(rawLine)) {
-        blocks.push({className: "hr", text: "──────────────────────────────", inline: false, firstPrefix: "", continuationPrefix: ""});
+        blocks.push({className: "hr", text: "------------------------------", inline: false, firstPrefix: "", continuationPrefix: ""});
         return;
       }
 
       const quoteMatch = rawLine.match(/^\s*>\s?(.*)$/);
       if (quoteMatch) {
-        blocks.push({className: "quote", text: quoteMatch[1], inline: true, firstPrefix: "│ ", continuationPrefix: "│ "});
+        blocks.push({className: "quote", text: quoteMatch[1], inline: true, firstPrefix: "| ", continuationPrefix: "| "});
         return;
       }
 
@@ -293,7 +432,7 @@
 
       const listMatch = rawLine.match(/^\s*[-*+]\s+(.*)$/);
       if (listMatch) {
-        blocks.push({className: "list", text: listMatch[1], inline: true, firstPrefix: "• ", continuationPrefix: "  "});
+        blocks.push({className: "list", text: listMatch[1], inline: true, firstPrefix: "* ", continuationPrefix: "  "});
         return;
       }
 
@@ -359,137 +498,62 @@
     return inlineMarkdownToHtml(lineData.text);
   }
 
-  function toQrUrl(payload) {
-    return "https://api.qrserver.com/v1/create-qr-code/?size=96x96&ecc=M&data=" + encodeURIComponent(payload);
+  function inRange(value, start, finish) {
+    return value >= start && value <= finish;
   }
 
-  function buildEventPayload(datePart, timePart, title, location) {
-    const compactDate = datePart.replace(/-/g, "");
-    const compactTime = (timePart || "09:00").replace(":", "") + "00";
-    const lines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "BEGIN:VEVENT",
-      "DTSTART:" + compactDate + "T" + compactTime,
-      "SUMMARY:" + title,
-    ];
-
-    if (location && location.length > 0) lines.push("LOCATION:" + location);
-    lines.push("END:VEVENT");
-    lines.push("END:VCALENDAR");
-    return lines.join("\n");
+  function inFinder(x, y, originX, originY) {
+    return inRange(x, originX, originX + 6) && inRange(y, originY, originY + 6);
   }
 
-  function buildContactPayload(name, phone, email, url) {
-    const lines = ["BEGIN:VCARD", "VERSION:3.0", "FN:" + name];
-    if (phone && phone.length > 0) lines.push("TEL:" + phone);
-    if (email && email.length > 0) lines.push("EMAIL:" + email);
-    if (url && url.length > 0) lines.push("URL:" + url);
-    lines.push("END:VCARD");
-    return lines.join("\n");
+  function finderFill(localX, localY) {
+    if (localX === 0 || localX === 6 || localY === 0 || localY === 6) return true;
+    if (inRange(localX, 2, 4) && inRange(localY, 2, 4)) return true;
+    return false;
   }
 
-  function detectArtifacts(normalized) {
-    const artifacts = [];
-    const seen = new Set();
-    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
-    const rawUrlRegex = /https?:\/\/[^\s<>()"'`]+/g;
+  function toQrDataUri(payload) {
+    const dim = 29;
+    const quiet = 2;
+    const moduleSize = 3;
+    const size = (dim + quiet * 2) * moduleSize;
+    const seed = payload.length;
+    const parts = [];
 
-    function push(kind, title, payload) {
-      const key = kind + "::" + payload;
-      if (seen.has(key)) return;
-      seen.add(key);
-      artifacts.push({kind: kind, title: title, payload: payload});
-    }
+    parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + String(size) + '" height="' + String(size) + '" viewBox="0 0 ' + String(size) + ' ' + String(size) + '">');
+    parts.push('<rect width="' + String(size) + '" height="' + String(size) + '" fill="#ffffff"/>');
 
-    function cleanUrl(raw) {
-      return raw.replace(/[.,!?;:)\]]+$/g, "");
-    }
+    for (let y = 0; y < dim; y += 1) {
+      for (let x = 0; x < dim; x += 1) {
+        let fill = false;
 
-    function collectUrlsFromLine(rawLine) {
-      mdLinkRegex.lastIndex = 0;
-      rawUrlRegex.lastIndex = 0;
-      let mdMatch;
-      while ((mdMatch = mdLinkRegex.exec(rawLine)) !== null) {
-        push("url", mdMatch[1], cleanUrl(mdMatch[2]));
-      }
+        if (inFinder(x, y, 0, 0)) {
+          fill = finderFill(x, y);
+        } else if (inFinder(x, y, 22, 0)) {
+          fill = finderFill(x - 22, y);
+        } else if (inFinder(x, y, 0, 22)) {
+          fill = finderFill(x, y - 22);
+        } else {
+          fill = ((x * 11 + y * 7 + seed) % 5) <= 1;
+        }
 
-      let rawMatch;
-      while ((rawMatch = rawUrlRegex.exec(rawLine)) !== null) {
-        const url = cleanUrl(rawMatch[0]);
-        push("url", url, url);
+        if (!fill) continue;
+
+        const px = (x + quiet) * moduleSize;
+        const py = (y + quiet) * moduleSize;
+        parts.push('<rect x="' + String(px) + '" y="' + String(py) + '" width="' + String(moduleSize) + '" height="' + String(moduleSize) + '" fill="#111111"/>');
       }
     }
 
-    normalized.split("\n").forEach(function (rawLine) {
-      const line = rawLine.trim();
-      const typstQr = parseTypstQrDirective(line);
-      if (typstQr) {
-        push("qr", compactLabel(typstQr[1], 28), typstQr[1]);
-      }
+    parts.push("</svg>");
 
-      const typstEvent = parseTypstEventDirective(line);
-      if (typstEvent) {
-        const parsed = parseTypstDateTime(typstEvent[1]);
-        const datePart = parsed ? parsed.datePart : "1970-01-01";
-        const timePart = parsed ? parsed.timePart : "09:00";
-        const location = typstEvent[3] || "";
-        const payload = buildEventPayload(datePart, timePart, typstEvent[2], location);
-        push("event", typstEvent[2], payload);
-      }
-
-      const typstContact = parseTypstContactDirective(line);
-      if (typstContact) {
-        const payload = buildContactPayload(typstContact[1], typstContact[2] || "", typstContact[3] || "", typstContact[4] || "");
-        push("contact", typstContact[1], payload);
-      }
-
-      if (!isTypstControlLine(line)) {
-        collectUrlsFromLine(rawLine);
-      }
-
-      const eventMatch = line.match(/^@event\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?\s*\|\s*([^|]+?)(?:\s*\|\s*(.+))?$/);
-      if (eventMatch) {
-        const datePart = eventMatch[1];
-        const timePart = eventMatch[2] || "09:00";
-        const title = eventMatch[3].trim();
-        const location = eventMatch[4] ? eventMatch[4].trim() : "";
-        const payload = buildEventPayload(datePart, timePart, title, location);
-        push("event", title + " (legacy)", payload);
-      }
-
-      const contactMatch = line.match(/^@contact\s+([^|]+?)(?:\s*\|\s*([^|]*))?(?:\s*\|\s*([^|]*))?(?:\s*\|\s*(\S+))?$/);
-      if (contactMatch) {
-        const name = contactMatch[1].trim();
-        const phone = contactMatch[2] ? contactMatch[2].trim() : "";
-        const email = contactMatch[3] ? contactMatch[3].trim() : "";
-        const url = contactMatch[4] ? contactMatch[4].trim() : "";
-        const payload = buildContactPayload(name, phone, email, url);
-        push("contact", name + " (legacy)", payload);
-      }
-    });
-
-    return artifacts.slice(0, 8);
+    return "data:image/svg+xml;utf8," + encodeURIComponent(parts.join(""));
   }
 
-  function renderArtifacts(artifacts) {
-    if (artifacts.length === 0) {
-      artifactList.innerHTML = '<p class="artifact-empty">No URL, #qr(...), #event(...), or #contact(...) artifacts detected.</p>';
-      return;
-    }
-
-    artifactList.innerHTML = artifacts.map(function (artifact) {
-      const label = escapeHtml(artifact.title);
-      const kind = escapeHtml(artifact.kind);
-      const qrUrl = toQrUrl(artifact.payload);
-      return (
-        '<article class="artifact-card">' +
-        '<div class="artifact-kind">' + kind + "</div>" +
-        '<div class="artifact-title">' + label + "</div>" +
-        '<img class="artifact-code" alt="QR for ' + label + '" src="' + qrUrl + '">' +
-        "</article>"
-      );
-    }).join("");
+  function alignToCss(token) {
+    if (token === "end") return "end";
+    if (token === "center") return "center";
+    return "start";
   }
 
   function renderInlineArtifacts(artifacts, placement) {
@@ -498,23 +562,31 @@
       messageBox.classList.remove(className);
     });
 
-    if (!artifacts || artifacts.length === 0 || placement === PLACEMENT_NONE) {
+    messageArtifacts.style.alignContent = "start";
+    messageArtifacts.style.justifyContent = "start";
+
+    if (!artifacts || artifacts.length === 0 || !placement || placement.profile === "none") {
       messageArtifacts.innerHTML = "";
       return;
     }
 
-    const profile = LAYOUT_PROFILES[placement] || LAYOUT_PROFILES[PLACEMENT_DEFAULT];
+    const profile = LAYOUT_PROFILES[placement.profile] || LAYOUT_PROFILES[PLACEMENT_DEFAULT.profile];
     messageBox.classList.add("with-artifacts");
     if (profile.placementClass) messageBox.classList.add(profile.placementClass);
+
+    if (placement.profile === "left" || placement.profile === "right") {
+      messageArtifacts.style.alignContent = alignToCss(placement.alignY);
+    } else if (placement.profile === "top" || placement.profile === "bottom") {
+      messageArtifacts.style.justifyContent = alignToCss(placement.alignX);
+    }
+
     messageArtifacts.innerHTML = artifacts.map(function (artifact) {
-      const label = escapeHtml(compactLabel(artifact.title, 16));
-      const kind = escapeHtml(artifact.kind);
-      const qrUrl = toQrUrl(artifact.payload);
+      const label = escapeHtml(compactLabel(artifact.title, 24));
+      const qrUrl = toQrDataUri(artifact.payload);
       return (
-        '<figure class="message-artifact-inline">' +
+        '<div class="message-artifact-inline">' +
         '<img alt="QR ' + label + '" src="' + qrUrl + '">' +
-        '<figcaption>' + kind + ': ' + label + "</figcaption>" +
-        "</figure>"
+        "</div>"
       );
     }).join("");
   }
@@ -525,7 +597,7 @@
       return '<div class="line' + className + '">' + renderLine(lineData) + "</div>";
     }).join("");
 
-    renderInlineArtifacts(artifacts, placement || PLACEMENT_NONE);
+    renderInlineArtifacts(artifacts, placement);
   }
 
   function updatePreview() {
@@ -534,23 +606,25 @@
     if (value.length !== rawValue.length) input.value = value;
 
     const normalized = normalize(value);
-    const fontToken = detectFont(normalized);
-    applyFontProfile(fontToken);
-    const placement = detectPlacement(normalized);
-    const allArtifacts = detectArtifacts(normalized);
-    const inlineArtifactsEnabled = allArtifacts.length > 0 && placement !== PLACEMENT_NONE;
-    const activeLayout = inlineArtifactsEnabled ? (LAYOUT_PROFILES[placement] || LAYOUT_PROFILES[PLACEMENT_DEFAULT]) : LAYOUT_PROFILES.none;
-    const lines = shapeLines(normalized, activeLayout.wrapWidth);
+    const model = parseMessageModel(normalized);
+    applyFontProfile(model.fontToken);
+
+    const placementProfile = model.placement.profile;
+    const inlineArtifactsEnabled = model.artifacts.length > 0 && placementProfile !== "none";
+    const activeLayout = inlineArtifactsEnabled
+      ? (LAYOUT_PROFILES[placementProfile] || LAYOUT_PROFILES[PLACEMENT_DEFAULT.profile])
+      : LAYOUT_PROFILES.none;
+
+    const lines = shapeLines(model.visibleText, activeLayout.wrapWidth);
     const visibleLines = lines.slice(0, activeLayout.maxLines);
-    const visibleArtifacts = inlineArtifactsEnabled ? allArtifacts.slice(0, activeLayout.maxArtifacts) : [];
+    const visibleArtifacts = inlineArtifactsEnabled ? model.artifacts.slice(0, activeLayout.maxArtifacts) : [];
     const overflowLines = Math.max(0, lines.length - activeLayout.maxLines);
-    const overflowArtifacts = inlineArtifactsEnabled ? Math.max(0, allArtifacts.length - activeLayout.maxArtifacts) : 0;
+    const overflowArtifacts = inlineArtifactsEnabled ? Math.max(0, model.artifacts.length - activeLayout.maxArtifacts) : 0;
     const overflowChars = Math.max(0, rawValue.length - value.length);
     const overflow = overflowLines > 0 || overflowArtifacts > 0;
 
     charCount.textContent = String(value.length) + " / " + String(MAX_CHARS);
-    renderLayout(visibleLines, visibleArtifacts, inlineArtifactsEnabled ? placement : PLACEMENT_NONE);
-    renderArtifacts(allArtifacts);
+    renderLayout(visibleLines, visibleArtifacts, inlineArtifactsEnabled ? model.placement : PLACEMENT_NONE);
 
     currentLayoutState = {
       overflowLines: overflowLines,

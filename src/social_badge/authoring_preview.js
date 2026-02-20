@@ -45,13 +45,14 @@
   const charCount = document.getElementById("char-count");
   const publishStatus = document.getElementById("publish-status");
   const publishBtn = document.getElementById("publish-btn");
+  const typstRender = document.getElementById("typst-render");
   const messageBox = document.getElementById("message-box");
   const messageText = document.getElementById("message-text");
   const messageArtifacts = document.getElementById("message-artifacts");
   const authorChip = document.getElementById("author-chip");
   const trustChip = document.getElementById("trust-chip");
 
-  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip) {
+  if (!input || !charCount || !publishStatus || !publishBtn || !typstRender || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip) {
     return;
   }
 
@@ -62,6 +63,9 @@
   const measureCtx = measureCanvas.getContext("2d");
 
   let currentLayoutState = {overflowLines: 0, overflowArtifacts: 0, overflowChars: 0};
+  let previewTimer = null;
+  let previewRequestId = 0;
+  let previewAbortController = null;
 
   function clonePlacement(placement) {
     return {
@@ -498,51 +502,14 @@
     return inlineMarkdownToHtml(lineData.text);
   }
 
-  function toQrUrl(payload) {
-    return "https://api.qrserver.com/v1/create-qr-code/?size=96x96&ecc=M&data=" + encodeURIComponent(payload);
-  }
-
-  function alignToCss(token) {
-    if (token === "end") return "end";
-    if (token === "center") return "center";
-    return "start";
-  }
-
-  function renderInlineArtifacts(artifacts, placement) {
+  function renderInlineArtifacts() {
     messageBox.classList.remove("with-artifacts");
     ARTIFACT_PLACEMENT_CLASSES.forEach(function (className) {
       messageBox.classList.remove(className);
     });
 
     messageBox.style.alignContent = "start";
-    messageArtifacts.style.alignContent = "start";
-    messageArtifacts.style.justifyContent = "start";
-
-    if (!artifacts || artifacts.length === 0 || !placement || placement.profile === "none") {
-      messageArtifacts.innerHTML = "";
-      return;
-    }
-
-    const profile = LAYOUT_PROFILES[placement.profile] || LAYOUT_PROFILES[PLACEMENT_DEFAULT.profile];
-    messageBox.classList.add("with-artifacts");
-    if (profile.placementClass) messageBox.classList.add(profile.placementClass);
-    if (placement.profile === "left" || placement.profile === "right") messageBox.style.alignContent = "stretch";
-
-    if (placement.profile === "left" || placement.profile === "right") {
-      messageArtifacts.style.alignContent = alignToCss(placement.alignY);
-    } else if (placement.profile === "top" || placement.profile === "bottom") {
-      messageArtifacts.style.justifyContent = alignToCss(placement.alignX);
-    }
-
-    messageArtifacts.innerHTML = artifacts.map(function (artifact) {
-      const label = escapeHtml(compactLabel(artifact.title, 24));
-      const qrUrl = toQrUrl(artifact.payload);
-      return (
-        '<div class="message-artifact-inline">' +
-        '<img alt="QR ' + label + '" src="' + qrUrl + '">' +
-        "</div>"
-      );
-    }).join("");
+    messageArtifacts.innerHTML = "";
   }
 
   function renderLayout(lines, artifacts, placement) {
@@ -552,6 +519,52 @@
     }).join("");
 
     renderInlineArtifacts(artifacts, placement);
+  }
+
+  async function renderTypstPreview(messageBody) {
+    const requestId = ++previewRequestId;
+    if (previewAbortController) previewAbortController.abort();
+    previewAbortController = new AbortController();
+
+    if (!messageBody.trim()) {
+      typstRender.innerHTML = "";
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/preview/render", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({body: messageBody}),
+        signal: previewAbortController.signal,
+      });
+
+      if (!response.ok) {
+        if (requestId === previewRequestId) typstRender.innerHTML = "";
+        return;
+      }
+
+      const payload = await response.json().catch(function () {
+        return {svg: ""};
+      });
+
+      if (requestId === previewRequestId) {
+        const svg = typeof payload.svg === "string" ? payload.svg : "";
+        typstRender.innerHTML = svg;
+      }
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+      if (requestId === previewRequestId) typstRender.innerHTML = "";
+    } finally {
+      if (requestId === previewRequestId) previewAbortController = null;
+    }
+  }
+
+  function scheduleTypstPreview(messageBody) {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      renderTypstPreview(messageBody);
+    }, 240);
   }
 
   function updatePreview() {
@@ -571,14 +584,14 @@
 
     const lines = shapeLines(model.visibleText, activeLayout.wrapWidth);
     const visibleLines = lines.slice(0, activeLayout.maxLines);
-    const visibleArtifacts = inlineArtifactsEnabled ? model.artifacts.slice(0, activeLayout.maxArtifacts) : [];
     const overflowLines = Math.max(0, lines.length - activeLayout.maxLines);
     const overflowArtifacts = inlineArtifactsEnabled ? Math.max(0, model.artifacts.length - activeLayout.maxArtifacts) : 0;
     const overflowChars = Math.max(0, rawValue.length - value.length);
     const overflow = overflowLines > 0 || overflowArtifacts > 0;
 
     charCount.textContent = String(value.length) + " / " + String(MAX_CHARS);
-    renderLayout(visibleLines, visibleArtifacts, inlineArtifactsEnabled ? model.placement : PLACEMENT_NONE);
+    renderLayout(visibleLines, [], PLACEMENT_NONE);
+    scheduleTypstPreview(value);
 
     currentLayoutState = {
       overflowLines: overflowLines,

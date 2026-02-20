@@ -258,6 +258,7 @@ module SocialBadge
             top: 32px;
             width: 304px;
             height: 224px;
+            z-index: 1;
             overflow: hidden;
             display: grid;
             grid-template-columns: 1fr;
@@ -268,6 +269,23 @@ module SocialBadge
             font-family: var(--preview-font-family);
             color: #1f2520;
             user-select: text;
+          }
+
+          .typst-render {
+            position: absolute;
+            left: 48px;
+            top: 32px;
+            width: 304px;
+            height: 224px;
+            z-index: 2;
+            overflow: hidden;
+            pointer-events: none;
+          }
+
+          .typst-render svg {
+            display: block;
+            width: 304px;
+            height: 224px;
           }
 
           .message-box.with-artifacts {
@@ -448,6 +466,7 @@ module SocialBadge
               <div class="gutter-left" aria-hidden="true"></div>
               <div class="gutter-right" aria-hidden="true"></div>
               <div class="viewport" aria-hidden="true"></div>
+              <div class="typst-render" id="typst-render" aria-hidden="true"></div>
               <div class="message-box" id="message-box">
                 <div class="message-text" id="message-text"></div>
                 <div class="message-artifacts" id="message-artifacts"></div>

@@ -4,6 +4,7 @@ require "./timeline_service"
 require "./message_creation_service"
 require "./policy_service"
 require "./authoring_page_service"
+require "./typst_preview_service"
 require "./peer_relay_service"
 require "./peer_transport_service"
 
@@ -19,6 +20,7 @@ module SocialBadge
       @peer_transport = peer_transport || PeerTransportService.new(@timeline)
       @message_creation = MessageCreationService.new(@timeline)
       @authoring_page = AuthoringPageService.new
+      @typst_preview = TypstPreviewService.new
       @peer_relay = PeerRelayService.new(@peer_transport)
     end
 
@@ -57,6 +59,20 @@ module SocialBadge
       rescue ex : ArgumentError
         env.response.status_code = 422
         {error: ex.message}.to_json
+      end
+
+      post "/api/preview/render" do |env|
+        env.response.content_type = "application/json"
+        @typst_preview.render(env.request.body).to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 422
+        {error: ex.message}.to_json
+      rescue ex : TypstPreviewService::UnavailableError
+        env.response.status_code = 503
+        {error: ex.message}.to_json
+      rescue ex : TypstPreviewService::RenderError
+        env.response.status_code = 500
+        {error: "Preview render failed"}.to_json
       end
 
       get "/api/peer/outbound_queue" do |env|

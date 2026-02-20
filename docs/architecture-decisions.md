@@ -55,10 +55,11 @@ inspecting queue state, marking delivery outcomes, and accepting inbound envelop
 
 ## Web typesetting is canonical; badge consumes rendered image artifacts
 
-For the `MSG_320x240` message window, browser layout behavior is the canonical
-typesetting reference. The badge LVGL path should consume deterministic
-`320x240` image artifacts produced from the same layout contract, while web
-output preserves selectable/copyable text.
+For the `MSG_320x240` message window, Typst rendering is the canonical
+typesetting reference. The browser composer calls `POST /api/preview/render`
+to render the message window through the same Typst layout package used by
+fixture tests, while the badge LVGL path consumes deterministic `320x240`
+image artifacts from that contract.
 
 ## Authoring preview supports Typst-style placement blocks
 

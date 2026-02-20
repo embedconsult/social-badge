@@ -1,13 +1,49 @@
+require "html"
 require "json"
 require "./models"
 
 module SocialBadge
   class AuthoringPageService
-    MAX_CHARS = Message::MAX_BODY_LENGTH
+    MAX_CHARS      = Message::MAX_BODY_LENGTH
+    PREVIEW_SCRIPT = {{ read_file("#{__DIR__}/authoring_preview.js") }}
+
+    FONT_PROFILES = [
+      {
+        id:        "noto-sans-mono",
+        label:     "Noto Sans Mono",
+        css_stack: "\"Noto Sans Mono\", \"Liberation Mono\", \"DejaVu Sans Mono\", monospace",
+      },
+      {
+        id:        "noto-sans",
+        label:     "Noto Sans",
+        css_stack: "\"Noto Sans\", \"Liberation Sans\", \"DejaVu Sans\", sans-serif",
+      },
+      {
+        id:        "noto-serif",
+        label:     "Noto Serif",
+        css_stack: "\"Noto Serif\", \"Liberation Serif\", \"DejaVu Serif\", serif",
+      },
+      {
+        id:        "atkinson",
+        label:     "Atkinson Hyperlegible",
+        css_stack: "\"Atkinson Hyperlegible\", \"Noto Sans\", \"Liberation Sans\", sans-serif",
+      },
+      {
+        id:        "ibm-plex-mono",
+        label:     "IBM Plex Mono",
+        css_stack: "\"IBM Plex Mono\", \"Noto Sans Mono\", \"Liberation Mono\", monospace",
+      },
+    ] of NamedTuple(id: String, label: String, css_stack: String)
 
     def render(identity : Identity) : String
-      author_name_json = identity.display_name.to_json
-      trust_level_json = identity.trust_level.to_s.to_json
+      font_options_html = build_font_options
+      config_json = {
+        max_chars:       MAX_CHARS,
+        author_name:     identity.display_name,
+        trust_level:     identity.trust_level.to_s,
+        font_profiles:   FONT_PROFILES,
+        default_font_id: FONT_PROFILES.first[:id],
+      }.to_json.gsub("</", "<\\/")
 
       <<-HTML
       <!doctype html>
@@ -24,6 +60,7 @@ module SocialBadge
             --muted: #5f6d63;
             --accent: #2f6f5f;
             --edge: #c3ccc4;
+            --preview-font-family: "Noto Sans Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
           }
 
           * { box-sizing: border-box; }
@@ -37,7 +74,7 @@ module SocialBadge
           }
 
           .wrap {
-            width: min(1100px, 100% - 32px);
+            width: min(1240px, 100% - 32px);
             margin: 24px auto 40px;
             display: grid;
             gap: 20px;
@@ -58,6 +95,12 @@ module SocialBadge
             letter-spacing: 0.01em;
           }
 
+          h2 {
+            margin: 0;
+            font-size: 1.06rem;
+            letter-spacing: 0.01em;
+          }
+
           p {
             margin: 0 0 12px;
             color: var(--muted);
@@ -65,7 +108,7 @@ module SocialBadge
 
           textarea {
             width: 100%;
-            min-height: 210px;
+            min-height: 260px;
             resize: vertical;
             border: 1px solid var(--edge);
             border-radius: 10px;
@@ -94,10 +137,25 @@ module SocialBadge
             font-size: 0.95rem;
           }
 
-          .actions {
+          .controls {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
+          }
+
+          label {
+            font-size: 0.9rem;
+            color: var(--muted);
+          }
+
+          select {
+            border: 1px solid var(--edge);
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 0.95rem;
+            background: #fff;
+            color: var(--ink);
           }
 
           button {
@@ -204,7 +262,9 @@ module SocialBadge
             width: 304px;
             height: 224px;
             overflow: hidden;
-            font: 16px/18px "Menlo", "SFMono-Regular", "Consolas", monospace;
+            font-size: 16px;
+            line-height: 18px;
+            font-family: var(--preview-font-family);
             color: #1f2520;
             user-select: text;
           }
@@ -214,8 +274,30 @@ module SocialBadge
             white-space: pre;
           }
 
+          .line.heading-1,
+          .line.heading-2,
+          .line.heading-3 {
+            font-weight: 700;
+          }
+
+          .line.heading-1 { letter-spacing: 0.02em; }
+          .line.quote { color: #31443a; }
+          .line.code {
+            background: #eff3ef;
+            border-left: 2px solid #9bab9f;
+            padding-left: 4px;
+          }
+          .line.hr {
+            color: #6c7b71;
+          }
+          .line.table {
+            color: #2d3a32;
+            font-weight: 600;
+          }
+
           .line strong { font-weight: 700; }
           .line em { font-style: italic; }
+          .line del { text-decoration: line-through; }
           .line code {
             border: 1px solid #c6cec7;
             border-radius: 3px;
@@ -228,6 +310,58 @@ module SocialBadge
             color: #285f96;
             text-decoration: underline;
             text-underline-offset: 2px;
+          }
+
+          .artifact-panel {
+            margin-top: 14px;
+            border-top: 1px solid var(--edge);
+            padding-top: 12px;
+          }
+
+          .artifact-panel p {
+            margin-top: 6px;
+            margin-bottom: 10px;
+          }
+
+          .artifact-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+          }
+
+          .artifact-card {
+            border: 1px solid var(--edge);
+            border-radius: 8px;
+            background: #f9fbf9;
+            padding: 8px;
+            display: grid;
+            gap: 8px;
+          }
+
+          .artifact-kind {
+            font: 11px/1 "Menlo", "SFMono-Regular", "Consolas", monospace;
+            letter-spacing: 0.03em;
+            color: #456657;
+            text-transform: uppercase;
+          }
+
+          .artifact-title {
+            font-weight: 700;
+            font-size: 0.92rem;
+            line-height: 1.2;
+            color: #1f2520;
+          }
+
+          .artifact-code {
+            width: 96px;
+            height: 96px;
+            border: 1px solid var(--edge);
+            background: #fff;
+          }
+
+          .artifact-empty {
+            color: var(--muted);
+            font-size: 0.92rem;
           }
 
           .note {
@@ -250,12 +384,15 @@ module SocialBadge
             <textarea id="message-input" maxlength="#{MAX_CHARS}" placeholder="Write a Meshtastic-friendly message (max #{MAX_CHARS} chars)"></textarea>
             <div class="toolbar">
               <div class="meta" id="char-count">0 / #{MAX_CHARS}</div>
-              <div class="actions">
+              <div class="controls">
+                <label for="font-profile">Font</label>
+                <select id="font-profile">#{font_options_html}</select>
                 <button id="publish-btn" type="button">Publish</button>
               </div>
             </div>
             <div class="publish-status" id="publish-status"></div>
-            <p class="note">Markdown subset: <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>, <code>[label](url)</code>, basic lists.</p>
+            <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. QR artifacts: URLs, <code>@event</code>, <code>@contact</code>.</p>
+            <p class="note">Event syntax: <code>@event 2026-03-01 18:30 | Title | Location</code>. Contact syntax: <code>@contact Name | phone | email | https://url</code>.</p>
           </section>
 
           <section class="card">
@@ -277,210 +414,30 @@ module SocialBadge
                 <button class="secondary" id="next-page" type="button">Next</button>
               </div>
             </div>
+
+            <section class="artifact-panel">
+              <h2>QR Artifacts</h2>
+              <p>Generated from URLs, calendar entries, and contact cards.</p>
+              <div class="artifact-list" id="artifact-list"></div>
+            </section>
           </section>
         </div>
 
+        <script id="preview-config" type="application/json">#{config_json}</script>
         <script>
-          (function () {
-            const MAX_CHARS = #{MAX_CHARS};
-            const CONTENT_WIDTH = 304;
-            const MAX_LINES_PER_PAGE = 12;
-            const FONT = "16px Menlo, SFMono-Regular, Consolas, monospace";
-            const authorName = #{author_name_json};
-            const trustLevel = #{trust_level_json};
-
-            const input = document.getElementById('message-input');
-            const charCount = document.getElementById('char-count');
-            const publishStatus = document.getElementById('publish-status');
-            const publishBtn = document.getElementById('publish-btn');
-            const messageBox = document.getElementById('message-box');
-            const pageChip = document.getElementById('page-chip');
-            const prevPageBtn = document.getElementById('prev-page');
-            const nextPageBtn = document.getElementById('next-page');
-            const authorChip = document.getElementById('author-chip');
-            const trustChip = document.getElementById('trust-chip');
-
-            authorChip.textContent = authorName;
-            trustChip.textContent = trustLevel;
-
-            const measureCanvas = document.createElement('canvas');
-            const measureCtx = measureCanvas.getContext('2d');
-            measureCtx.font = FONT;
-
-            let pages = [[]];
-            let currentPage = 0;
-
-            function normalize(text) {
-              return text.replace(/\\r\\n?/g, '\\n').split('\\n').map(function (line) {
-                return line.replace(/\\s+$/g, '');
-              }).join('\\n');
-            }
-
-            function measure(text) {
-              return measureCtx.measureText(text).width;
-            }
-
-            function wrapLine(line) {
-              if (line.length === 0) {
-                return [''];
-              }
-
-              const words = line.split(/(\\s+)/).filter(function (part) { return part.length > 0; });
-              const lines = [];
-              let current = '';
-
-              words.forEach(function (part) {
-                const next = current + part;
-                if (measure(next) <= CONTENT_WIDTH) {
-                  current = next;
-                  return;
-                }
-
-                if (current.length > 0) {
-                  lines.push(current);
-                  current = '';
-                }
-
-                if (measure(part) <= CONTENT_WIDTH) {
-                  current = part.replace(/^\\s+/, '');
-                  return;
-                }
-
-                let chunk = '';
-                for (const char of part) {
-                  const maybe = chunk + char;
-                  if (measure(maybe) <= CONTENT_WIDTH) {
-                    chunk = maybe;
-                  } else {
-                    if (chunk.length > 0) {
-                      lines.push(chunk);
-                    }
-                    chunk = char;
-                  }
-                }
-                current = chunk;
-              });
-
-              lines.push(current);
-              return lines;
-            }
-
-            function inlineMarkdownToHtml(line) {
-              const escaped = line
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-
-              const linked = escaped.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, function (_, label, url) {
-                const safeUrl = url.replace(/"/g, '&quot;');
-                return '<a href="' + safeUrl + '" target="_blank" rel="noreferrer noopener">' + label + '</a>';
-              });
-
-              return linked
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
-                .replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
-            }
-
-            function paginate(text) {
-              const normalized = normalize(text);
-              const wrapped = [];
-              normalized.split('\\n').forEach(function (rawLine) {
-                wrapLine(rawLine).forEach(function (line) {
-                  wrapped.push(line);
-                });
-              });
-
-              if (wrapped.length === 0) {
-                return [['']];
-              }
-
-              const result = [];
-              for (let i = 0; i < wrapped.length; i += MAX_LINES_PER_PAGE) {
-                result.push(wrapped.slice(i, i + MAX_LINES_PER_PAGE));
-              }
-              return result;
-            }
-
-            function renderPage() {
-              const totalPages = pages.length;
-              if (currentPage < 0) {
-                currentPage = 0;
-              }
-              if (currentPage >= totalPages) {
-                currentPage = totalPages - 1;
-              }
-
-              const pageLines = pages[currentPage] || [''];
-              messageBox.innerHTML = pageLines.map(function (line) {
-                return '<div class="line">' + inlineMarkdownToHtml(line) + '</div>';
-              }).join('');
-
-              pageChip.textContent = String(currentPage + 1) + '/' + String(totalPages);
-              prevPageBtn.disabled = currentPage === 0;
-              nextPageBtn.disabled = currentPage === totalPages - 1;
-            }
-
-            function updatePreview() {
-              const value = input.value.slice(0, MAX_CHARS);
-              if (value.length !== input.value.length) {
-                input.value = value;
-              }
-
-              charCount.textContent = String(value.length) + ' / ' + String(MAX_CHARS);
-              pages = paginate(value);
-              currentPage = 0;
-              renderPage();
-            }
-
-            async function publish() {
-              const body = input.value.trim();
-              if (!body) {
-                publishStatus.textContent = 'Message is blank.';
-                return;
-              }
-
-              publishBtn.disabled = true;
-              publishStatus.textContent = 'Publishing...';
-
-              try {
-                const response = await fetch('/api/messages', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({body: body})
-                });
-
-                if (!response.ok) {
-                  const errorPayload = await response.json().catch(function () { return {error: 'Publish failed'}; });
-                  publishStatus.textContent = errorPayload.error || 'Publish failed';
-                  return;
-                }
-
-                publishStatus.textContent = 'Published.';
-              } catch (error) {
-                publishStatus.textContent = 'Network error while publishing.';
-              } finally {
-                publishBtn.disabled = false;
-              }
-            }
-
-            input.addEventListener('input', updatePreview);
-            prevPageBtn.addEventListener('click', function () {
-              currentPage -= 1;
-              renderPage();
-            });
-            nextPageBtn.addEventListener('click', function () {
-              currentPage += 1;
-              renderPage();
-            });
-            publishBtn.addEventListener('click', publish);
-
-            updatePreview();
-          })();
+        #{PREVIEW_SCRIPT}
         </script>
       </body>
       </html>
       HTML
+    end
+
+    private def build_font_options : String
+      FONT_PROFILES.map do |profile|
+        id = HTML.escape(profile[:id])
+        label = HTML.escape(profile[:label])
+        %(<option value="#{id}">#{label}</option>)
+      end.join
     end
   end
 end

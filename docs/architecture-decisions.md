@@ -59,3 +59,10 @@ For the `MSG_320x240` viewport, browser layout behavior is the canonical typeset
 The badge LVGL path should consume deterministic `320x240` image artifacts produced from the same
 layout contract, while web output preserves selectable/copyable text. Trust indicators stay in
 chrome only and never alter message body content.
+
+## Authoring preview supports structured QR artifacts
+
+The web composer now recognizes URLs, `@event` calendar lines, and `@contact` card lines
+as structured artifact sources. These generate QR artifact previews while keeping message text
+itself as the primary authored content. This provides a predictable authoring path for
+handoff payloads without adding transport metadata into message body rendering.

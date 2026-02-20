@@ -51,15 +51,28 @@ Typography baseline:
 1. Font size: `16px`
 2. Line height: `18px`
 3. Max lines/page: `12`
+4. Font profile IDs: `noto-sans-mono`, `noto-sans`, `noto-serif`, `atkinson`, `ibm-plex-mono`
 
-Extended markdown subset:
+Extended markdown set (v1 preview):
 
 1. Paragraphs and explicit newlines
-2. `**bold**`
-3. `*italic*`
-4. Inline code: `` `code` ``
-5. Links: `[label](url)`
-6. Lists: `- item`, `* item`, `1. item`
+2. Headings `#` through `######`
+3. Block quotes with `>`
+4. Unordered and ordered lists
+5. Task list items `- [ ]` and `- [x]`
+6. Inline code and fenced code blocks
+7. Links `[label](url)` and bare URLs
+8. Horizontal rules (`---`, `***`, `___`)
+9. Table-like rows using `| cell | cell |`
+10. Strikethrough `~~text~~`
+
+Message extension directives:
+
+1. Calendar entry: `@event YYYY-MM-DD HH:MM | Title | Location`
+2. Contact card: `@contact Name | phone | email | https://url`
+
+These directives remain message content for authoring/preview and also produce
+QR artifacts in the web preview panel.
 
 UTF-8 behavior:
 
@@ -103,6 +116,11 @@ Each phase has explicit input/output to keep behavior testable.
 - Input: same page model used by web paint.
 - Output: `320x240` raster image payload for LVGL.
 
+7. Build Artifacts
+- Input: normalized message content.
+- Output: QR payload candidates for URLs, `@event` entries (iCalendar), and
+  `@contact` entries (vCard).
+
 ## Output contract
 
 For each rendered page, produce:
@@ -112,12 +130,15 @@ For each rendered page, produce:
 3. `page_index` and `page_count`
 4. `plain_text` (copy/paste-friendly text as rendered)
 5. `image_320x240` (badge display artifact)
+6. `qr_artifacts` (list of URL/event/contact payloads for QR generation)
 
 Notes:
 
 1. Web uses `plain_text` and semantic markup for selection/copy.
 2. Badge uses `image_320x240` only; text channel is optional there.
 3. Browser and badge outputs must be generated from the same phase outputs and geometry constants.
+4. Current web preview QR images are generated via an external QR image service;
+   production/device paths should use a local encoder.
 
 ## Repeatability constraints
 

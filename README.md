@@ -25,6 +25,8 @@ See `docs/typst-layout-tests.md` for Typst package usage and the bit-exact
 layout regression workflow.
 See `docs/open-font-profiles.md` for open font profile IDs used across preview
 and badge targets.
+See `docs/typst-runtime.md` for Typst runtime requirements and Debian/Ubuntu
+installation options.
 
 ## Run (when Crystal is available)
 

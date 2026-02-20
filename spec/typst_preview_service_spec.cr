@@ -1,6 +1,13 @@
 require "./spec_helper"
 
 describe SocialBadge::TypstPreviewService do
+  it "reports startup diagnostics" do
+    service = SocialBadge::TypstPreviewService.new
+    status = service.startup_status
+
+    status.detail.should_not be_empty
+  end
+
   it "rejects invalid JSON payloads" do
     service = SocialBadge::TypstPreviewService.new
 

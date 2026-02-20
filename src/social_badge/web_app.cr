@@ -22,6 +22,12 @@ module SocialBadge
       @authoring_page = AuthoringPageService.new
       @typst_preview = TypstPreviewService.new
       @peer_relay = PeerRelayService.new(@peer_transport)
+
+      if @typst_preview.startup_status.available
+        STDERR.puts "[social-badge] Typst preview enabled: #{@typst_preview.startup_status.detail}"
+      else
+        STDERR.puts "[social-badge] Typst preview disabled: #{@typst_preview.startup_status.detail}"
+      end
     end
 
     def routes
@@ -32,7 +38,13 @@ module SocialBadge
 
       get "/health" do |env|
         env.response.content_type = "application/json"
-        {status: "ok", service: "social-badge", version: VERSION}.to_json
+        {
+          status:                  "ok",
+          service:                 "social-badge",
+          version:                 VERSION,
+          typst_preview_available: @typst_preview.startup_status.available,
+          typst_preview_detail:    @typst_preview.startup_status.detail,
+        }.to_json
       end
 
       get "/api/profile" do |env|

@@ -17,6 +17,17 @@ module SocialBadge
     class RenderError < Exception
     end
 
+    struct StartupStatus
+      include JSON::Serializable
+
+      getter available : Bool
+      getter detail : String
+      getter typst_path : String?
+
+      def initialize(@available : Bool, @detail : String, @typst_path : String? = nil)
+      end
+    end
+
     struct PreviewRequest
       include JSON::Serializable
 
@@ -34,10 +45,18 @@ module SocialBadge
       end
     end
 
+    getter startup_status : StartupStatus
+
+    def initialize
+      @startup_status = probe_startup
+    end
+
     def render(request_body : IO?) : PreviewResponse
       payload = parse_payload(request_body)
       validate_body(payload.body)
-      raise UnavailableError.new("Typst preview unavailable: typst not found") unless typst_available?
+      unless @startup_status.available
+        raise UnavailableError.new(@startup_status.detail)
+      end
 
       model = parse_message(payload.body)
       typ_source = build_typst_source(model[:font_id], model[:body_typst])
@@ -263,6 +282,9 @@ module SocialBadge
         err = output.to_s if err.empty?
         first_line = err.lines.first?.try(&.strip) || ""
         detail = first_line.empty? ? "Preview render failed" : "Preview render failed: #{first_line}"
+        if snap_confinement_error?(Process.find_executable("typst"), first_line)
+          detail = "Preview render failed: snap confinement blocked file access; install typst from official binary or cargo"
+        end
         raise RenderError.new(detail)
       end
 
@@ -277,8 +299,91 @@ module SocialBadge
       "\"#{escaped}\""
     end
 
-    private def typst_available? : Bool
-      !!Process.find_executable("typst")
+    private def probe_startup : StartupStatus
+      typst_path = Process.find_executable("typst")
+      unless typst_path
+        return StartupStatus.new(
+          available: false,
+          detail: "Typst preview unavailable: typst not found in PATH",
+          typst_path: nil
+        )
+      end
+
+      vendor_lib = File.join(ROOT_DIR, "typst/vendor/tiaoma/lib.typ")
+      vendor_wasm = File.join(ROOT_DIR, "typst/vendor/tiaoma/zint_typst_plugin.wasm")
+      unless File.exists?(vendor_lib) && File.exists?(vendor_wasm)
+        return StartupStatus.new(
+          available: false,
+          detail: "Typst preview unavailable: missing vendored tiaoma files under typst/vendor/tiaoma",
+          typst_path: typst_path
+        )
+      end
+
+      version_text = typst_version || "unknown version"
+      probe_error = run_probe_compile
+      if probe_error
+        detail = if snap_confinement_error?(typst_path, probe_error)
+                   "Typst preview unavailable: snap confinement blocked file access; install typst from official binary or cargo for local preview rendering"
+                 else
+                   "Typst preview unavailable: startup probe failed (#{probe_error})"
+                 end
+        return StartupStatus.new(
+          available: false,
+          detail: detail,
+          typst_path: typst_path
+        )
+      end
+
+      StartupStatus.new(
+        available: true,
+        detail: "Typst preview ready (#{version_text})",
+        typst_path: typst_path
+      )
+    end
+
+    private def run_probe_compile : String?
+      FileUtils.mkdir_p(CACHE_DIR)
+      probe_typ = File.join(CACHE_DIR, "_startup_probe.typ")
+      probe_svg = File.join(CACHE_DIR, "_startup_probe.svg")
+      source = build_typst_source(
+        "nsm",
+        "#(#{typst_string("probe")})\n#linebreak()\n#place(bottom + right)[#qr(#{typst_string("https://example.com")})]"
+      )
+      File.write(probe_typ, source)
+
+      output = IO::Memory.new
+      error = IO::Memory.new
+      status = Process.run(
+        "typst",
+        ["compile", "--root", ROOT_DIR, probe_typ, probe_svg, "--format", "svg"],
+        output: output,
+        error: error
+      )
+
+      return nil if status.success?
+
+      err = error.to_s
+      err = output.to_s if err.empty?
+      first_line = err.lines.first?.try(&.strip) || ""
+      first_line.empty? ? "unknown compile error" : first_line
+    rescue ex
+      message = ex.message || ""
+      message.empty? ? ex.class.name : message
+    end
+
+    private def typst_version : String?
+      output = IO::Memory.new
+      status = Process.run("typst", ["--version"], output: output, error: Process::Redirect::Close)
+      return nil unless status.success?
+      output.to_s.strip
+    rescue
+      nil
+    end
+
+    private def snap_confinement_error?(typst_path : String?, message : String) : Bool
+      return false unless typst_path
+      return false unless typst_path.starts_with?("/snap/")
+      message.downcase.includes?("access denied")
     end
   end
 end

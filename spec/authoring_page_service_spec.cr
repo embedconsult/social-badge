@@ -19,7 +19,11 @@ describe SocialBadge::AuthoringPageService do
     html.should contain("trustChip.textContent = trustLevel")
     html.should contain("id=\"font-profile\"")
     html.should contain("id=\"artifact-list\"")
-    html.should contain("@event 2026-03-01 18:30 | Title | Location")
+    html.should contain("Typst-style control directives are non-printing")
+    html.should contain("#place(&quot;left&quot;)")
+    html.should contain("#place(&quot;none&quot;)")
+    html.should contain("#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)")
+    html.should contain("id=\"message-artifacts\"")
     html.should contain("id=\"preview-config\"")
     html.should contain("Noto Sans Mono")
   end

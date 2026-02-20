@@ -7,7 +7,8 @@ Initial Crystal scaffold for the Social Badge peer node.
 - Crystal project layout compatible with `crystal init` conventions.
 - Kemal-based HTTP shell with health, profile, and timeline endpoints.
 - Browser composer at `/` with live 320x240 message preview, richer markdown,
-  open-font profile selection, and QR artifacts for URL/event/contact content.
+  open-font profile selection, Typst-style directives, and embedded QR artifacts
+  for URL/event/contact content.
 - A small in-memory domain service for posting Meshtastic-friendly messages.
 - Canonical Meshtastic envelope projection and HTTP peer relay queue/retry endpoints.
 - Explicit JSON request models for API payload validation.

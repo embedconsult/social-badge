@@ -10,8 +10,22 @@
   }
 
   const MAX_CHARS = config.max_chars || 280;
-  const CONTENT_WIDTH = 304;
-  const MAX_LINES_PER_PAGE = 12;
+  const BASE_CONTENT_WIDTH = 304;
+  const PLACEMENT_DEFAULT = "right";
+  const PLACEMENT_NONE = "none";
+  const ARTIFACT_PLACEMENT_CLASSES = [
+    "with-artifacts-right",
+    "with-artifacts-left",
+    "with-artifacts-top",
+    "with-artifacts-bottom",
+  ];
+  const LAYOUT_PROFILES = {
+    none: {placementClass: "", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 12, artifactsPerPage: 0},
+    right: {placementClass: "with-artifacts-right", wrapWidth: 200, maxLines: 12, artifactsPerPage: 2},
+    left: {placementClass: "with-artifacts-left", wrapWidth: 200, maxLines: 12, artifactsPerPage: 2},
+    top: {placementClass: "with-artifacts-top", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, artifactsPerPage: 3},
+    bottom: {placementClass: "with-artifacts-bottom", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, artifactsPerPage: 3},
+  };
   const FONT_SIZE = 16;
   const authorName = config.author_name || "Demo Peer";
   const trustLevel = config.trust_level || "UNVERIFIED";
@@ -23,6 +37,8 @@
   const publishStatus = document.getElementById("publish-status");
   const publishBtn = document.getElementById("publish-btn");
   const messageBox = document.getElementById("message-box");
+  const messageText = document.getElementById("message-text");
+  const messageArtifacts = document.getElementById("message-artifacts");
   const pageChip = document.getElementById("page-chip");
   const prevPageBtn = document.getElementById("prev-page");
   const nextPageBtn = document.getElementById("next-page");
@@ -31,7 +47,7 @@
   const fontSelect = document.getElementById("font-profile");
   const artifactList = document.getElementById("artifact-list");
 
-  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !pageChip || !prevPageBtn || !nextPageBtn || !authorChip || !trustChip || !fontSelect || !artifactList) {
+  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !pageChip || !prevPageBtn || !nextPageBtn || !authorChip || !trustChip || !fontSelect || !artifactList) {
     return;
   }
 
@@ -41,7 +57,7 @@
   const measureCanvas = document.createElement("canvas");
   const measureCtx = measureCanvas.getContext("2d");
 
-  let pages = [[]];
+  let pages = [{lines: [{className: "blank", text: "", inline: false}], artifacts: [], placement: PLACEMENT_NONE}];
   let currentPage = 0;
 
   function escapeHtml(text) {
@@ -49,6 +65,11 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
+  }
+
+  function compactLabel(text, maxLen) {
+    if (text.length <= maxLen) return text;
+    return text.slice(0, Math.max(0, maxLen - 1)) + "…";
   }
 
   function findFontProfile(profileId) {
@@ -63,7 +84,7 @@
 
     fontSelect.value = profile.id;
     measureCtx.font = String(FONT_SIZE) + "px " + profile.css_stack;
-    messageBox.style.fontFamily = profile.css_stack;
+    messageText.style.fontFamily = profile.css_stack;
     document.documentElement.style.setProperty("--preview-font-family", profile.css_stack);
   }
 
@@ -95,14 +116,11 @@
       }
     }
 
-    if (chunk.length > 0) {
-      chunks.push(chunk);
-    }
-
+    if (chunk.length > 0) chunks.push(chunk);
     return chunks;
   }
 
-  function wrapWithPrefix(text, firstPrefix, continuationPrefix) {
+  function wrapWithPrefix(text, firstPrefix, continuationPrefix, wrapWidth) {
     const wrappedLines = [];
     const words = text.split(/(\s+)/).filter(function (part) {
       return part.length > 0;
@@ -113,7 +131,7 @@
 
     words.forEach(function (part) {
       const candidate = current + part;
-      if (measure(candidate) <= CONTENT_WIDTH) {
+      if (measure(candidate) <= wrapWidth) {
         current = candidate;
         return;
       }
@@ -124,12 +142,12 @@
         current = continuationPrefix;
       }
 
-      if (measure(current + part) <= CONTENT_WIDTH) {
+      if (measure(current + part) <= wrapWidth) {
         current += part.replace(/^\s+/, "");
         return;
       }
 
-      const maxWidth = CONTENT_WIDTH - measure(currentPrefix);
+      const maxWidth = wrapWidth - measure(currentPrefix);
       const chunks = splitLongToken(part.replace(/^\s+/, ""), maxWidth);
       chunks.forEach(function (chunk, index) {
         if (index === 0) {
@@ -142,11 +160,47 @@
       });
     });
 
-    if (current.length > 0) {
-      wrappedLines.push(current);
-    }
-
+    if (current.length > 0) wrappedLines.push(current);
     return wrappedLines.length > 0 ? wrappedLines : [""];
+  }
+
+  function parseTypstDateTime(value) {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/);
+    if (!match) return null;
+    return {datePart: match[1], timePart: match[2] || "09:00"};
+  }
+
+  function parseTypstPlaceDirective(line) {
+    const placeMatch = line.match(/^#place\(\s*(?:"([A-Za-z]+)"|([A-Za-z]+))\s*\)$/);
+    if (!placeMatch) return null;
+
+    const raw = (placeMatch[1] || placeMatch[2] || "").toLowerCase();
+    if (raw === "float" || raw === "auto" || raw === "default") return PLACEMENT_DEFAULT;
+    if (raw === "off" || raw === "hidden") return PLACEMENT_NONE;
+    if (raw === "right" || raw === "left" || raw === "top" || raw === "bottom" || raw === PLACEMENT_NONE) return raw;
+    return null;
+  }
+
+  function parseTypstQrDirective(line) {
+    return line.match(/^#qr\(\s*"([^"]+)"\s*\)$/);
+  }
+
+  function parseTypstEventDirective(line) {
+    return line.match(/^#event\(\s*"([^"]+)"\s*,\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?\s*\)$/);
+  }
+
+  function parseTypstContactDirective(line) {
+    return line.match(/^#contact\(\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?\s*\)$/);
+  }
+
+  function detectPlacement(normalizedText) {
+    let placement = PLACEMENT_DEFAULT;
+    normalizedText.split("\n").forEach(function (rawLine) {
+      const line = rawLine.trim();
+      const candidate = parseTypstPlaceDirective(line);
+      if (candidate) placement = candidate;
+    });
+    return placement;
   }
 
   function parseBlocks(normalizedText) {
@@ -157,6 +211,16 @@
     lines.forEach(function (rawLine) {
       if (/^```/.test(rawLine)) {
         inCodeFence = !inCodeFence;
+        return;
+      }
+
+      if (inCodeFence) {
+        blocks.push({className: "code", text: rawLine, inline: false, firstPrefix: "", continuationPrefix: ""});
+        return;
+      }
+
+      const line = rawLine.trim();
+      if (parseTypstPlaceDirective(line) || parseTypstQrDirective(line) || parseTypstEventDirective(line) || parseTypstContactDirective(line)) {
         return;
       }
 
@@ -174,11 +238,6 @@
         if (contactMatch[2] && contactMatch[2].trim().length > 0) segments.push(contactMatch[2].trim());
         if (contactMatch[3] && contactMatch[3].trim().length > 0) segments.push(contactMatch[3].trim());
         blocks.push({className: "table", text: "CONTACT " + segments.join(" | "), inline: true, firstPrefix: "", continuationPrefix: "  "});
-        return;
-      }
-
-      if (inCodeFence) {
-        blocks.push({className: "code", text: rawLine, inline: false, firstPrefix: "", continuationPrefix: ""});
         return;
       }
 
@@ -225,16 +284,11 @@
       }
 
       if (/^\s*\|.*\|\s*$/.test(rawLine)) {
-        const cells = rawLine
-          .split("|")
-          .slice(1, -1)
-          .map(function (cell) {
-            return cell.trim();
-          })
-          .filter(function (cell) {
-            return cell.length > 0;
-          });
-
+        const cells = rawLine.split("|").slice(1, -1).map(function (cell) {
+          return cell.trim();
+        }).filter(function (cell) {
+          return cell.length > 0;
+        });
         blocks.push({className: "table", text: cells.join(" | "), inline: true, firstPrefix: "", continuationPrefix: "  "});
         return;
       }
@@ -245,16 +299,15 @@
     return blocks;
   }
 
-  function blocksToLines(blocks) {
+  function blocksToLines(blocks, wrapWidth) {
     const lines = [];
-
     blocks.forEach(function (block) {
       if (block.className === "blank") {
         lines.push({className: "blank", text: "", inline: false});
         return;
       }
 
-      const wrapped = wrapWithPrefix(block.text, block.firstPrefix || "", block.continuationPrefix || "");
+      const wrapped = wrapWithPrefix(block.text, block.firstPrefix || "", block.continuationPrefix || "", wrapWidth);
       wrapped.forEach(function (lineText) {
         lines.push({className: block.className, text: lineText, inline: block.inline});
       });
@@ -281,42 +334,21 @@
       .replace(/\*([^*]+)\*/g, "<em>$1</em>");
   }
 
-  function paginate(text) {
-    const normalized = normalize(text);
+  function paginate(normalized, wrapWidth, maxLinesPerPage) {
     const blocks = parseBlocks(normalized);
-    const lines = blocksToLines(blocks);
+    const lines = blocksToLines(blocks, wrapWidth);
     const pagesOut = [];
 
-    for (let i = 0; i < lines.length; i += MAX_LINES_PER_PAGE) {
-      pagesOut.push(lines.slice(i, i + MAX_LINES_PER_PAGE));
+    for (let i = 0; i < lines.length; i += maxLinesPerPage) {
+      pagesOut.push(lines.slice(i, i + maxLinesPerPage));
     }
 
     return pagesOut.length > 0 ? pagesOut : [[{className: "blank", text: "", inline: false}]];
   }
 
   function renderLine(lineData) {
-    if (!lineData.inline) {
-      return escapeHtml(lineData.text);
-    }
+    if (!lineData.inline) return escapeHtml(lineData.text);
     return inlineMarkdownToHtml(lineData.text);
-  }
-
-  function renderPage() {
-    const totalPages = pages.length;
-    if (currentPage < 0) currentPage = 0;
-    if (currentPage >= totalPages) currentPage = totalPages - 1;
-
-    const pageLines = pages[currentPage] || [{className: "blank", text: "", inline: false}];
-    messageBox.innerHTML = pageLines
-      .map(function (lineData) {
-        const className = lineData.className ? " " + lineData.className : "";
-        return '<div class="line' + className + '">' + renderLine(lineData) + "</div>";
-      })
-      .join("");
-
-    pageChip.textContent = String(currentPage + 1) + "/" + String(totalPages);
-    prevPageBtn.disabled = currentPage === 0;
-    nextPageBtn.disabled = currentPage === totalPages - 1;
   }
 
   function toQrUrl(payload) {
@@ -334,10 +366,7 @@
       "SUMMARY:" + title,
     ];
 
-    if (location && location.length > 0) {
-      lines.push("LOCATION:" + location);
-    }
-
+    if (location && location.length > 0) lines.push("LOCATION:" + location);
     lines.push("END:VEVENT");
     lines.push("END:VCALENDAR");
     return lines.join("\n");
@@ -375,7 +404,29 @@
       push("url", rawMatch[0], rawMatch[0]);
     }
 
-    normalized.split("\n").forEach(function (line) {
+    normalized.split("\n").forEach(function (rawLine) {
+      const line = rawLine.trim();
+      const typstQr = parseTypstQrDirective(line);
+      if (typstQr) {
+        push("qr", compactLabel(typstQr[1], 28), typstQr[1]);
+      }
+
+      const typstEvent = parseTypstEventDirective(line);
+      if (typstEvent) {
+        const parsed = parseTypstDateTime(typstEvent[1]);
+        const datePart = parsed ? parsed.datePart : "1970-01-01";
+        const timePart = parsed ? parsed.timePart : "09:00";
+        const location = typstEvent[3] || "";
+        const payload = buildEventPayload(datePart, timePart, typstEvent[2], location);
+        push("event", typstEvent[2], payload);
+      }
+
+      const typstContact = parseTypstContactDirective(line);
+      if (typstContact) {
+        const payload = buildContactPayload(typstContact[1], typstContact[2] || "", typstContact[3] || "", typstContact[4] || "");
+        push("contact", typstContact[1], payload);
+      }
+
       const eventMatch = line.match(/^@event\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?\s*\|\s*([^|]+?)(?:\s*\|\s*(.+))?$/);
       if (eventMatch) {
         const datePart = eventMatch[1];
@@ -383,7 +434,7 @@
         const title = eventMatch[3].trim();
         const location = eventMatch[4] ? eventMatch[4].trim() : "";
         const payload = buildEventPayload(datePart, timePart, title, location);
-        push("event", title + " (" + datePart + " " + timePart + ")", payload);
+        push("event", title + " (legacy)", payload);
       }
 
       const contactMatch = line.match(/^@contact\s+([^|]+?)(?:\s*\|\s*([^|]*))?(?:\s*\|\s*([^|]*))?(?:\s*\|\s*(\S+))?$/);
@@ -393,7 +444,7 @@
         const email = contactMatch[3] ? contactMatch[3].trim() : "";
         const url = contactMatch[4] ? contactMatch[4].trim() : "";
         const payload = buildContactPayload(name, phone, email, url);
-        push("contact", name, payload);
+        push("contact", name + " (legacy)", payload);
       }
     });
 
@@ -402,38 +453,98 @@
 
   function renderArtifacts(artifacts) {
     if (artifacts.length === 0) {
-      artifactList.innerHTML = '<p class="artifact-empty">No URL, @event, or @contact artifacts detected.</p>';
+      artifactList.innerHTML = '<p class="artifact-empty">No URL, #qr(...), #event(...), or #contact(...) artifacts detected.</p>';
       return;
     }
 
-    artifactList.innerHTML = artifacts
-      .map(function (artifact) {
-        const label = escapeHtml(artifact.title);
-        const kind = escapeHtml(artifact.kind);
-        const qrUrl = toQrUrl(artifact.payload);
-        return (
-          '<article class="artifact-card">' +
-          '<div class="artifact-kind">' + kind + "</div>" +
-          '<div class="artifact-title">' + label + "</div>" +
-          '<img class="artifact-code" alt="QR for ' + label + '" src="' + qrUrl + '">' +
-          "</article>"
-        );
-      })
-      .join("");
+    artifactList.innerHTML = artifacts.map(function (artifact) {
+      const label = escapeHtml(artifact.title);
+      const kind = escapeHtml(artifact.kind);
+      const qrUrl = toQrUrl(artifact.payload);
+      return (
+        '<article class="artifact-card">' +
+        '<div class="artifact-kind">' + kind + "</div>" +
+        '<div class="artifact-title">' + label + "</div>" +
+        '<img class="artifact-code" alt="QR for ' + label + '" src="' + qrUrl + '">' +
+        "</article>"
+      );
+    }).join("");
+  }
+
+  function renderInlineArtifacts(artifacts, placement) {
+    messageBox.classList.remove("with-artifacts");
+    ARTIFACT_PLACEMENT_CLASSES.forEach(function (className) {
+      messageBox.classList.remove(className);
+    });
+
+    if (!artifacts || artifacts.length === 0 || placement === PLACEMENT_NONE) {
+      messageArtifacts.innerHTML = "";
+      return;
+    }
+
+    const profile = LAYOUT_PROFILES[placement] || LAYOUT_PROFILES[PLACEMENT_DEFAULT];
+    messageBox.classList.add("with-artifacts");
+    if (profile.placementClass) messageBox.classList.add(profile.placementClass);
+    messageArtifacts.innerHTML = artifacts.map(function (artifact) {
+      const label = escapeHtml(compactLabel(artifact.title, 16));
+      const kind = escapeHtml(artifact.kind);
+      const qrUrl = toQrUrl(artifact.payload);
+      return (
+        '<figure class="message-artifact-inline">' +
+        '<img alt="QR ' + label + '" src="' + qrUrl + '">' +
+        '<figcaption>' + kind + ': ' + label + "</figcaption>" +
+        "</figure>"
+      );
+    }).join("");
+  }
+
+  function renderPage() {
+    const totalPages = pages.length;
+    if (currentPage < 0) currentPage = 0;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+
+    const page = pages[currentPage] || {lines: [{className: "blank", text: "", inline: false}], artifacts: [], placement: PLACEMENT_NONE};
+    messageText.innerHTML = page.lines.map(function (lineData) {
+      const className = lineData.className ? " " + lineData.className : "";
+      return '<div class="line' + className + '">' + renderLine(lineData) + "</div>";
+    }).join("");
+
+    renderInlineArtifacts(page.artifacts, page.placement || PLACEMENT_NONE);
+
+    pageChip.textContent = String(currentPage + 1) + "/" + String(totalPages);
+    prevPageBtn.disabled = currentPage === 0;
+    nextPageBtn.disabled = currentPage === totalPages - 1;
   }
 
   function updatePreview() {
     const value = input.value.slice(0, MAX_CHARS);
-    if (value.length !== input.value.length) {
-      input.value = value;
-    }
+    if (value.length !== input.value.length) input.value = value;
 
     const normalized = normalize(value);
+    const placement = detectPlacement(normalized);
+    const allArtifacts = detectArtifacts(normalized);
+    const inlineArtifactsEnabled = allArtifacts.length > 0 && placement !== PLACEMENT_NONE;
+    const activeLayout = inlineArtifactsEnabled ? (LAYOUT_PROFILES[placement] || LAYOUT_PROFILES[PLACEMENT_DEFAULT]) : LAYOUT_PROFILES.none;
+    const wrapWidth = activeLayout.wrapWidth;
+    const textPages = paginate(normalized, wrapWidth, activeLayout.maxLines);
+    const artifactPages = inlineArtifactsEnabled ? Math.max(1, Math.ceil(allArtifacts.length / activeLayout.artifactsPerPage)) : 1;
+    const totalPages = Math.max(textPages.length, artifactPages);
+
+    pages = Array.from({length: totalPages}, function (_, index) {
+      const pageArtifacts = inlineArtifactsEnabled ?
+        allArtifacts.slice(index * activeLayout.artifactsPerPage, (index + 1) * activeLayout.artifactsPerPage) :
+        [];
+      return {
+        lines: textPages[index] || [{className: "blank", text: "", inline: false}],
+        artifacts: pageArtifacts,
+        placement: inlineArtifactsEnabled ? placement : PLACEMENT_NONE,
+      };
+    });
+
     charCount.textContent = String(value.length) + " / " + String(MAX_CHARS);
-    pages = paginate(value);
     currentPage = 0;
     renderPage();
-    renderArtifacts(detectArtifacts(normalized));
+    renderArtifacts(allArtifacts);
   }
 
   async function publish() {

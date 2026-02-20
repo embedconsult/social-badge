@@ -62,7 +62,10 @@ chrome only and never alter message body content.
 
 ## Authoring preview supports structured QR artifacts
 
-The web composer now recognizes URLs, `@event` calendar lines, and `@contact` card lines
-as structured artifact sources. These generate QR artifact previews while keeping message text
-itself as the primary authored content. This provides a predictable authoring path for
-handoff payloads without adding transport metadata into message body rendering.
+The web composer recognizes URLs and Typst-style directives (`#place(...)`,
+`#qr(...)`, `#event(...)`, `#contact(...)`) as artifact/layout controls.
+Typst directives are non-printing in the body layout so control syntax does not
+consume message viewport lines. Inline artifact placement defaults to right-float
+and can be explicitly set with `#place("right"|"left"|"top"|"bottom"|"none")`.
+This keeps the `320x240` rendering compact and predictable while preserving clean
+copy/paste text output for the web view.

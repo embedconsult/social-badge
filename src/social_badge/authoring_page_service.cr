@@ -262,11 +262,119 @@ module SocialBadge
             width: 304px;
             height: 224px;
             overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr;
+            column-gap: 8px;
+            align-content: start;
             font-size: 16px;
             line-height: 18px;
             font-family: var(--preview-font-family);
             color: #1f2520;
             user-select: text;
+          }
+
+          .message-box.with-artifacts {
+            column-gap: 8px;
+          }
+
+          .message-text {
+            overflow: hidden;
+          }
+
+          .message-artifacts {
+            display: none;
+            align-content: start;
+            gap: 8px;
+            overflow: hidden;
+          }
+
+          .message-box.with-artifacts .message-artifacts {
+            display: grid;
+          }
+
+          .message-box.with-artifacts-right {
+            grid-template-columns: 200px 96px;
+          }
+
+          .message-box.with-artifacts-right .message-text {
+            order: 1;
+          }
+
+          .message-box.with-artifacts-right .message-artifacts {
+            order: 2;
+          }
+
+          .message-box.with-artifacts-left {
+            grid-template-columns: 96px 200px;
+          }
+
+          .message-box.with-artifacts-left .message-artifacts {
+            order: 1;
+          }
+
+          .message-box.with-artifacts-left .message-text {
+            order: 2;
+          }
+
+          .message-box.with-artifacts-top {
+            grid-template-columns: 1fr;
+            grid-template-rows: 96px 120px;
+            row-gap: 8px;
+          }
+
+          .message-box.with-artifacts-top .message-artifacts {
+            order: 1;
+            grid-auto-flow: column;
+            grid-auto-columns: 96px;
+            justify-content: start;
+          }
+
+          .message-box.with-artifacts-top .message-text {
+            order: 2;
+          }
+
+          .message-box.with-artifacts-bottom {
+            grid-template-columns: 1fr;
+            grid-template-rows: 120px 96px;
+            row-gap: 8px;
+          }
+
+          .message-box.with-artifacts-bottom .message-text {
+            order: 1;
+          }
+
+          .message-box.with-artifacts-bottom .message-artifacts {
+            order: 2;
+            grid-auto-flow: column;
+            grid-auto-columns: 96px;
+            justify-content: start;
+          }
+
+          .message-artifact-inline {
+            width: 96px;
+            display: grid;
+            gap: 3px;
+          }
+
+          .message-artifact-inline img {
+            width: 96px;
+            height: 96px;
+            border: 1px solid #c6cec7;
+            background: #fff;
+          }
+
+          .message-artifact-inline figcaption {
+            margin: 0;
+            font: 10px/1.2 "Menlo", "SFMono-Regular", "Consolas", monospace;
+            color: #4b5e54;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .message-box.with-artifacts-top .message-artifact-inline figcaption,
+          .message-box.with-artifacts-bottom .message-artifact-inline figcaption {
+            display: none;
           }
 
           .line {
@@ -391,8 +499,9 @@ module SocialBadge
               </div>
             </div>
             <div class="publish-status" id="publish-status"></div>
-            <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. QR artifacts: URLs, <code>@event</code>, <code>@contact</code>.</p>
-            <p class="note">Event syntax: <code>@event 2026-03-01 18:30 | Title | Location</code>. Contact syntax: <code>@contact Name | phone | email | https://url</code>.</p>
+            <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. Typst-style control directives are non-printing: <code>#place(...)</code>, <code>#qr(...)</code>, <code>#event(...)</code>, <code>#contact(...)</code>.</p>
+            <p class="note">Layout defaults to right float. Placement options: <code>#place(&quot;right&quot;)</code>, <code>#place(&quot;left&quot;)</code>, <code>#place(&quot;top&quot;)</code>, <code>#place(&quot;bottom&quot;)</code>, <code>#place(&quot;none&quot;)</code>.</p>
+            <p class="note">Examples: <code>#qr(&quot;https://beagleboard.org&quot;)</code>, <code>#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)</code>, <code>#contact(&quot;Name&quot;, &quot;+1-555-0100&quot;, &quot;name@example.com&quot;, &quot;https://example.com&quot;)</code>.</p>
           </section>
 
           <section class="card">
@@ -407,7 +516,10 @@ module SocialBadge
               <div class="gutter-left" aria-hidden="true"></div>
               <div class="gutter-right" aria-hidden="true"></div>
               <div class="viewport" aria-hidden="true"></div>
-              <div class="message-box" id="message-box"></div>
+              <div class="message-box" id="message-box">
+                <div class="message-text" id="message-text"></div>
+                <div class="message-artifacts" id="message-artifacts"></div>
+              </div>
               <div class="chrome-bottom">
                 <button class="secondary" id="prev-page" type="button">Prev</button>
                 <span id="page-chip">1/1</span>

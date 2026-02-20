@@ -66,13 +66,16 @@ Extended markdown set (v1 preview):
 9. Table-like rows using `| cell | cell |`
 10. Strikethrough `~~text~~`
 
-Message extension directives:
+Typst-style extension directives:
 
-1. Calendar entry: `@event YYYY-MM-DD HH:MM | Title | Location`
-2. Contact card: `@contact Name | phone | email | https://url`
+1. Placement: `#place("right"|"left"|"top"|"bottom"|"none")`
+2. QR payload: `#qr("https://example.com")`
+3. Calendar entry: `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
+4. Contact card: `#contact("Name", "phone", "email", "https://url")`
 
-These directives remain message content for authoring/preview and also produce
-QR artifacts in the web preview panel.
+Typst directives are non-printing control lines in preview/layout. They produce
+QR artifacts and placement behavior but do not render as body text lines.
+If no `#place(...)` directive is present, inline artifacts use right-float layout.
 
 UTF-8 behavior:
 
@@ -118,8 +121,9 @@ Each phase has explicit input/output to keep behavior testable.
 
 7. Build Artifacts
 - Input: normalized message content.
-- Output: QR payload candidates for URLs, `@event` entries (iCalendar), and
-  `@contact` entries (vCard).
+- Output: QR payload candidates for URLs, `#qr(...)`, `#event(...)`
+  entries (iCalendar), and `#contact(...)` entries (vCard), plus inline
+  artifact placement mode from `#place(...)`.
 
 ## Output contract
 

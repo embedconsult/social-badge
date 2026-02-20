@@ -6,14 +6,14 @@
       "description": "Single QR placed in bottom-right with Typst-style content.",
       "message_typst": "#place(bottom + right)[#qr(\"https://bbb.io/badge\")]",
       "font_id": "nsm",
-      "expected_sha256": "0935910edf44a0ea0ce5a6c0e5bb2aa5c2f4c0ca4ab08f6a8fa9ef74681c3c63"
+      "expected_sha256": "a1737268b8a4bfc69fe337a5a98a9cea77f8c5577112dee2c5410ff97d420bab"
     },
     {
       "id": "qr_only_left",
       "description": "Single QR placed in top-left with Typst-style content.",
       "message_typst": "#place(top + left)[#qr(\"https://bbb.io/badge\")]",
       "font_id": "nsm",
-      "expected_sha256": "bb17c5bc46da435e7e361ed3a829e3464621c0b31563cf8225126e8180f964fb"
+      "expected_sha256": "76d1600e57a3174eed9b7466c2cd5a03dd9a2f0461d7658682f2dbf915ecf27b"
     },
     {
       "id": "text_only_mono",
@@ -27,7 +27,7 @@
       "description": "Paragraph text with one QR aligned right.",
       "message_typst": "Agenda\\\n- Bring badge\\\n- Scan QR\\\n- Sync peer\n#place(right)[#qr(\"https://bbb.io/badge\")]",
       "font_id": "ns",
-      "expected_sha256": "fe9b7e1bb72c80cb8a5ea25e346bcd3befd6c55075ba06052bdc5b1c65dca09d"
+      "expected_sha256": "1e72117c18193b71e3678d80fe92c75b8ade691fe899fdf7e999f3f6c043b4e3"
     }
   ]
 }

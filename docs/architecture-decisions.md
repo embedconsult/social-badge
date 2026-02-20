@@ -79,3 +79,10 @@ window typesetting contract used for fixture rendering.
 `testdata/typst/layout_cases.json` directly from raw message content and
 verifies SHA-256 hashes for bit-exact regression checks. This keeps layout
 validation machine-checkable while the browser preview evolves.
+
+## Typst QR generation is local and real (no synthetic pattern)
+
+To avoid placeholder QR glyphs, the Typst layout package now imports a vendored
+local copy of the `tiaoma` plugin (`typst/vendor/tiaoma`) and generates real
+QR code symbols in `#qr(...)` calls. This keeps fixture rendering offline and
+repeatable while producing standards-compliant QR output.

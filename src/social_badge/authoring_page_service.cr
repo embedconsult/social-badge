@@ -262,7 +262,7 @@ module SocialBadge
             display: grid;
             grid-template-columns: 1fr;
             column-gap: 8px;
-            align-content: start;
+            align-content: stretch;
             font-size: 16px;
             line-height: 18px;
             font-family: var(--preview-font-family);

@@ -25,7 +25,11 @@ content box (`304x224`).
 Built-in helpers exported by the package:
 
 1. `#place(loc)[content]` for alignment within the message window content box.
-2. `#qr("https://...")` for compact QR glyph rendering (glyph only, no caption text).
+2. `#qr("https://...")` for real QR symbol rendering (glyph only, no caption text).
+
+`#qr(...)` is backed by the vendored local `tiaoma` package at
+`typst/vendor/tiaoma`, so Typst fixture rendering does not depend on network
+package downloads.
 
 Example:
 

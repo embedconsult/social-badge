@@ -498,56 +498,8 @@
     return inlineMarkdownToHtml(lineData.text);
   }
 
-  function inRange(value, start, finish) {
-    return value >= start && value <= finish;
-  }
-
-  function inFinder(x, y, originX, originY) {
-    return inRange(x, originX, originX + 6) && inRange(y, originY, originY + 6);
-  }
-
-  function finderFill(localX, localY) {
-    if (localX === 0 || localX === 6 || localY === 0 || localY === 6) return true;
-    if (inRange(localX, 2, 4) && inRange(localY, 2, 4)) return true;
-    return false;
-  }
-
-  function toQrDataUri(payload) {
-    const dim = 29;
-    const quiet = 2;
-    const moduleSize = 3;
-    const size = (dim + quiet * 2) * moduleSize;
-    const seed = payload.length;
-    const parts = [];
-
-    parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + String(size) + '" height="' + String(size) + '" viewBox="0 0 ' + String(size) + ' ' + String(size) + '">');
-    parts.push('<rect width="' + String(size) + '" height="' + String(size) + '" fill="#ffffff"/>');
-
-    for (let y = 0; y < dim; y += 1) {
-      for (let x = 0; x < dim; x += 1) {
-        let fill = false;
-
-        if (inFinder(x, y, 0, 0)) {
-          fill = finderFill(x, y);
-        } else if (inFinder(x, y, 22, 0)) {
-          fill = finderFill(x - 22, y);
-        } else if (inFinder(x, y, 0, 22)) {
-          fill = finderFill(x, y - 22);
-        } else {
-          fill = ((x * 11 + y * 7 + seed) % 5) <= 1;
-        }
-
-        if (!fill) continue;
-
-        const px = (x + quiet) * moduleSize;
-        const py = (y + quiet) * moduleSize;
-        parts.push('<rect x="' + String(px) + '" y="' + String(py) + '" width="' + String(moduleSize) + '" height="' + String(moduleSize) + '" fill="#111111"/>');
-      }
-    }
-
-    parts.push("</svg>");
-
-    return "data:image/svg+xml;utf8," + encodeURIComponent(parts.join(""));
+  function toQrUrl(payload) {
+    return "https://api.qrserver.com/v1/create-qr-code/?size=96x96&ecc=M&data=" + encodeURIComponent(payload);
   }
 
   function alignToCss(token) {
@@ -562,6 +514,7 @@
       messageBox.classList.remove(className);
     });
 
+    messageBox.style.alignContent = "start";
     messageArtifacts.style.alignContent = "start";
     messageArtifacts.style.justifyContent = "start";
 
@@ -573,6 +526,7 @@
     const profile = LAYOUT_PROFILES[placement.profile] || LAYOUT_PROFILES[PLACEMENT_DEFAULT.profile];
     messageBox.classList.add("with-artifacts");
     if (profile.placementClass) messageBox.classList.add(profile.placementClass);
+    if (placement.profile === "left" || placement.profile === "right") messageBox.style.alignContent = "stretch";
 
     if (placement.profile === "left" || placement.profile === "right") {
       messageArtifacts.style.alignContent = alignToCss(placement.alignY);
@@ -582,7 +536,7 @@
 
     messageArtifacts.innerHTML = artifacts.map(function (artifact) {
       const label = escapeHtml(compactLabel(artifact.title, 24));
-      const qrUrl = toQrDataUri(artifact.payload);
+      const qrUrl = toQrUrl(artifact.payload);
       return (
         '<div class="message-artifact-inline">' +
         '<img alt="QR ' + label + '" src="' + qrUrl + '">' +

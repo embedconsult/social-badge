@@ -1,4 +1,3 @@
-require "html"
 require "json"
 require "./models"
 
@@ -10,33 +9,37 @@ module SocialBadge
     FONT_PROFILES = [
       {
         id:        "noto-sans-mono",
+        short_id:  "nsm",
         label:     "Noto Sans Mono",
         css_stack: "\"Noto Sans Mono\", \"Liberation Mono\", \"DejaVu Sans Mono\", monospace",
       },
       {
         id:        "noto-sans",
+        short_id:  "ns",
         label:     "Noto Sans",
         css_stack: "\"Noto Sans\", \"Liberation Sans\", \"DejaVu Sans\", sans-serif",
       },
       {
         id:        "noto-serif",
+        short_id:  "ser",
         label:     "Noto Serif",
         css_stack: "\"Noto Serif\", \"Liberation Serif\", \"DejaVu Serif\", serif",
       },
       {
         id:        "atkinson",
+        short_id:  "atk",
         label:     "Atkinson Hyperlegible",
         css_stack: "\"Atkinson Hyperlegible\", \"Noto Sans\", \"Liberation Sans\", sans-serif",
       },
       {
         id:        "ibm-plex-mono",
+        short_id:  "ibm",
         label:     "IBM Plex Mono",
         css_stack: "\"IBM Plex Mono\", \"Noto Sans Mono\", \"Liberation Mono\", monospace",
       },
-    ] of NamedTuple(id: String, label: String, css_stack: String)
+    ] of NamedTuple(id: String, short_id: String, label: String, css_stack: String)
 
     def render(identity : Identity) : String
-      font_options_html = build_font_options
       config_json = {
         max_chars:       MAX_CHARS,
         author_name:     identity.display_name,
@@ -354,6 +357,7 @@ module SocialBadge
             width: 96px;
             display: grid;
             gap: 3px;
+            margin: 0;
           }
 
           .message-artifact-inline img {
@@ -493,13 +497,13 @@ module SocialBadge
             <div class="toolbar">
               <div class="meta" id="char-count">0 / #{MAX_CHARS}</div>
               <div class="controls">
-                <label for="font-profile">Font</label>
-                <select id="font-profile">#{font_options_html}</select>
                 <button id="publish-btn" type="button">Publish</button>
               </div>
             </div>
             <div class="publish-status" id="publish-status"></div>
-            <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. Typst-style control directives are non-printing: <code>#place(...)</code>, <code>#qr(...)</code>, <code>#event(...)</code>, <code>#contact(...)</code>.</p>
+            <p class="note">Hard limits: 280 chars and a single 320x240 frame. Overflow is rejected (no next page).</p>
+            <p class="note">Markdown: headings, quotes, lists, tasks, links, code, fences, rules, table lines, strikethrough. Typst-style control directives are non-printing: <code>#font(...)</code>, <code>#place(...)</code>, <code>#qr(...)</code>, <code>#event(...)</code>, <code>#contact(...)</code>.</p>
+            <p class="note">Font is message-defined. Short IDs: <code>nsm</code>, <code>ns</code>, <code>ser</code>, <code>atk</code>, <code>ibm</code>. Example: <code>#font(&quot;nsm&quot;)</code>.</p>
             <p class="note">Layout defaults to right float. Placement options: <code>#place(&quot;right&quot;)</code>, <code>#place(&quot;left&quot;)</code>, <code>#place(&quot;top&quot;)</code>, <code>#place(&quot;bottom&quot;)</code>, <code>#place(&quot;none&quot;)</code>.</p>
             <p class="note">Examples: <code>#qr(&quot;https://beagleboard.org&quot;)</code>, <code>#event(&quot;2026-03-01 18:30&quot;, &quot;Title&quot;, &quot;Location&quot;)</code>, <code>#contact(&quot;Name&quot;, &quot;+1-555-0100&quot;, &quot;name@example.com&quot;, &quot;https://example.com&quot;)</code>.</p>
           </section>
@@ -521,9 +525,7 @@ module SocialBadge
                 <div class="message-artifacts" id="message-artifacts"></div>
               </div>
               <div class="chrome-bottom">
-                <button class="secondary" id="prev-page" type="button">Prev</button>
-                <span id="page-chip">1/1</span>
-                <button class="secondary" id="next-page" type="button">Next</button>
+                <span>fixed 320x240</span>
               </div>
             </div>
 
@@ -542,14 +544,6 @@ module SocialBadge
       </body>
       </html>
       HTML
-    end
-
-    private def build_font_options : String
-      FONT_PROFILES.map do |profile|
-        id = HTML.escape(profile[:id])
-        label = HTML.escape(profile[:label])
-        %(<option value="#{id}">#{label}</option>)
-      end.join
     end
   end
 end

@@ -63,9 +63,10 @@ chrome only and never alter message body content.
 ## Authoring preview supports structured QR artifacts
 
 The web composer recognizes URLs and Typst-style directives (`#place(...)`,
-`#qr(...)`, `#event(...)`, `#contact(...)`) as artifact/layout controls.
+`#font(...)`, `#qr(...)`, `#event(...)`, `#contact(...)`) as artifact/layout controls.
 Typst directives are non-printing in the body layout so control syntax does not
 consume message viewport lines. Inline artifact placement defaults to right-float
 and can be explicitly set with `#place("right"|"left"|"top"|"bottom"|"none")`.
-This keeps the `320x240` rendering compact and predictable while preserving clean
-copy/paste text output for the web view.
+Font selection is message-defined via short IDs to keep rendering inputs fully
+self-contained in the message payload. Rendering uses a hard single-page 320x240
+limit with no pagination fallback; overflow must be corrected at author time.

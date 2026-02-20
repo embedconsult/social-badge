@@ -20,17 +20,17 @@
     "with-artifacts-bottom",
   ];
   const LAYOUT_PROFILES = {
-    none: {placementClass: "", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 12, artifactsPerPage: 0},
-    right: {placementClass: "with-artifacts-right", wrapWidth: 200, maxLines: 12, artifactsPerPage: 2},
-    left: {placementClass: "with-artifacts-left", wrapWidth: 200, maxLines: 12, artifactsPerPage: 2},
-    top: {placementClass: "with-artifacts-top", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, artifactsPerPage: 3},
-    bottom: {placementClass: "with-artifacts-bottom", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, artifactsPerPage: 3},
+    none: {placementClass: "", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 12, maxArtifacts: 0},
+    right: {placementClass: "with-artifacts-right", wrapWidth: 200, maxLines: 12, maxArtifacts: 2},
+    left: {placementClass: "with-artifacts-left", wrapWidth: 200, maxLines: 12, maxArtifacts: 2},
+    top: {placementClass: "with-artifacts-top", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, maxArtifacts: 3},
+    bottom: {placementClass: "with-artifacts-bottom", wrapWidth: BASE_CONTENT_WIDTH, maxLines: 6, maxArtifacts: 3},
   };
   const FONT_SIZE = 16;
   const authorName = config.author_name || "Demo Peer";
   const trustLevel = config.trust_level || "UNVERIFIED";
   const fontProfiles = Array.isArray(config.font_profiles) ? config.font_profiles : [];
-  const defaultFontId = config.default_font_id || (fontProfiles[0] && fontProfiles[0].id);
+  const defaultFontId = config.default_font_id || (fontProfiles[0] && fontProfiles[0].id) || "noto-sans-mono";
 
   const input = document.getElementById("message-input");
   const charCount = document.getElementById("char-count");
@@ -39,15 +39,11 @@
   const messageBox = document.getElementById("message-box");
   const messageText = document.getElementById("message-text");
   const messageArtifacts = document.getElementById("message-artifacts");
-  const pageChip = document.getElementById("page-chip");
-  const prevPageBtn = document.getElementById("prev-page");
-  const nextPageBtn = document.getElementById("next-page");
   const authorChip = document.getElementById("author-chip");
   const trustChip = document.getElementById("trust-chip");
-  const fontSelect = document.getElementById("font-profile");
   const artifactList = document.getElementById("artifact-list");
 
-  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !pageChip || !prevPageBtn || !nextPageBtn || !authorChip || !trustChip || !fontSelect || !artifactList) {
+  if (!input || !charCount || !publishStatus || !publishBtn || !messageBox || !messageText || !messageArtifacts || !authorChip || !trustChip || !artifactList) {
     return;
   }
 
@@ -57,8 +53,7 @@
   const measureCanvas = document.createElement("canvas");
   const measureCtx = measureCanvas.getContext("2d");
 
-  let pages = [{lines: [{className: "blank", text: "", inline: false}], artifacts: [], placement: PLACEMENT_NONE}];
-  let currentPage = 0;
+  let currentLayoutState = {overflowLines: 0, overflowArtifacts: 0, overflowChars: 0};
 
   function escapeHtml(text) {
     return text
@@ -73,8 +68,10 @@
   }
 
   function findFontProfile(profileId) {
+    if (!profileId) return fontProfiles[0];
+    const token = String(profileId).toLowerCase();
     return fontProfiles.find(function (profile) {
-      return profile.id === profileId;
+      return String(profile.id || "").toLowerCase() === token || String(profile.short_id || "").toLowerCase() === token;
     }) || fontProfiles[0];
   }
 
@@ -82,7 +79,6 @@
     const profile = findFontProfile(profileId);
     if (!profile) return;
 
-    fontSelect.value = profile.id;
     measureCtx.font = String(FONT_SIZE) + "px " + profile.css_stack;
     messageText.style.fontFamily = profile.css_stack;
     document.documentElement.style.setProperty("--preview-font-family", profile.css_stack);
@@ -193,6 +189,24 @@
     return line.match(/^#contact\(\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?(?:\s*,\s*"([^"]*)")?\s*\)$/);
   }
 
+  function parseTypstFontDirective(line) {
+    return line.match(/^#font\(\s*(?:"([A-Za-z0-9_-]+)"|([A-Za-z0-9_-]+))\s*\)$/);
+  }
+
+  function isTypstControlLine(line) {
+    return !!(parseTypstPlaceDirective(line) || parseTypstQrDirective(line) || parseTypstEventDirective(line) || parseTypstContactDirective(line) || parseTypstFontDirective(line));
+  }
+
+  function detectFont(normalizedText) {
+    let fontToken = defaultFontId;
+    normalizedText.split("\n").forEach(function (rawLine) {
+      const line = rawLine.trim();
+      const match = parseTypstFontDirective(line);
+      if (match) fontToken = match[1] || match[2];
+    });
+    return fontToken;
+  }
+
   function detectPlacement(normalizedText) {
     let placement = PLACEMENT_DEFAULT;
     normalizedText.split("\n").forEach(function (rawLine) {
@@ -220,7 +234,7 @@
       }
 
       const line = rawLine.trim();
-      if (parseTypstPlaceDirective(line) || parseTypstQrDirective(line) || parseTypstEventDirective(line) || parseTypstContactDirective(line)) {
+      if (isTypstControlLine(line)) {
         return;
       }
 
@@ -334,16 +348,10 @@
       .replace(/\*([^*]+)\*/g, "<em>$1</em>");
   }
 
-  function paginate(normalized, wrapWidth, maxLinesPerPage) {
+  function shapeLines(normalized, wrapWidth) {
     const blocks = parseBlocks(normalized);
     const lines = blocksToLines(blocks, wrapWidth);
-    const pagesOut = [];
-
-    for (let i = 0; i < lines.length; i += maxLinesPerPage) {
-      pagesOut.push(lines.slice(i, i + maxLinesPerPage));
-    }
-
-    return pagesOut.length > 0 ? pagesOut : [[{className: "blank", text: "", inline: false}]];
+    return lines.length > 0 ? lines : [{className: "blank", text: "", inline: false}];
   }
 
   function renderLine(lineData) {
@@ -384,6 +392,8 @@
   function detectArtifacts(normalized) {
     const artifacts = [];
     const seen = new Set();
+    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+    const rawUrlRegex = /https?:\/\/[^\s<>()"'`]+/g;
 
     function push(kind, title, payload) {
       const key = kind + "::" + payload;
@@ -392,16 +402,23 @@
       artifacts.push({kind: kind, title: title, payload: payload});
     }
 
-    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
-    let mdMatch;
-    while ((mdMatch = mdLinkRegex.exec(normalized)) !== null) {
-      push("url", mdMatch[1], mdMatch[2]);
+    function cleanUrl(raw) {
+      return raw.replace(/[.,!?;:)\]]+$/g, "");
     }
 
-    const rawUrlRegex = /\bhttps?:\/\/[^\s<>()]+/g;
-    let rawMatch;
-    while ((rawMatch = rawUrlRegex.exec(normalized)) !== null) {
-      push("url", rawMatch[0], rawMatch[0]);
+    function collectUrlsFromLine(rawLine) {
+      mdLinkRegex.lastIndex = 0;
+      rawUrlRegex.lastIndex = 0;
+      let mdMatch;
+      while ((mdMatch = mdLinkRegex.exec(rawLine)) !== null) {
+        push("url", mdMatch[1], cleanUrl(mdMatch[2]));
+      }
+
+      let rawMatch;
+      while ((rawMatch = rawUrlRegex.exec(rawLine)) !== null) {
+        const url = cleanUrl(rawMatch[0]);
+        push("url", url, url);
+      }
     }
 
     normalized.split("\n").forEach(function (rawLine) {
@@ -425,6 +442,10 @@
       if (typstContact) {
         const payload = buildContactPayload(typstContact[1], typstContact[2] || "", typstContact[3] || "", typstContact[4] || "");
         push("contact", typstContact[1], payload);
+      }
+
+      if (!isTypstControlLine(line)) {
+        collectUrlsFromLine(rawLine);
       }
 
       const eventMatch = line.match(/^@event\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?\s*\|\s*([^|]+?)(?:\s*\|\s*(.+))?$/);
@@ -498,59 +519,68 @@
     }).join("");
   }
 
-  function renderPage() {
-    const totalPages = pages.length;
-    if (currentPage < 0) currentPage = 0;
-    if (currentPage >= totalPages) currentPage = totalPages - 1;
-
-    const page = pages[currentPage] || {lines: [{className: "blank", text: "", inline: false}], artifacts: [], placement: PLACEMENT_NONE};
-    messageText.innerHTML = page.lines.map(function (lineData) {
+  function renderLayout(lines, artifacts, placement) {
+    messageText.innerHTML = lines.map(function (lineData) {
       const className = lineData.className ? " " + lineData.className : "";
       return '<div class="line' + className + '">' + renderLine(lineData) + "</div>";
     }).join("");
 
-    renderInlineArtifacts(page.artifacts, page.placement || PLACEMENT_NONE);
-
-    pageChip.textContent = String(currentPage + 1) + "/" + String(totalPages);
-    prevPageBtn.disabled = currentPage === 0;
-    nextPageBtn.disabled = currentPage === totalPages - 1;
+    renderInlineArtifacts(artifacts, placement || PLACEMENT_NONE);
   }
 
   function updatePreview() {
-    const value = input.value.slice(0, MAX_CHARS);
-    if (value.length !== input.value.length) input.value = value;
+    const rawValue = input.value;
+    const value = rawValue.slice(0, MAX_CHARS);
+    if (value.length !== rawValue.length) input.value = value;
 
     const normalized = normalize(value);
+    const fontToken = detectFont(normalized);
+    applyFontProfile(fontToken);
     const placement = detectPlacement(normalized);
     const allArtifacts = detectArtifacts(normalized);
     const inlineArtifactsEnabled = allArtifacts.length > 0 && placement !== PLACEMENT_NONE;
     const activeLayout = inlineArtifactsEnabled ? (LAYOUT_PROFILES[placement] || LAYOUT_PROFILES[PLACEMENT_DEFAULT]) : LAYOUT_PROFILES.none;
-    const wrapWidth = activeLayout.wrapWidth;
-    const textPages = paginate(normalized, wrapWidth, activeLayout.maxLines);
-    const artifactPages = inlineArtifactsEnabled ? Math.max(1, Math.ceil(allArtifacts.length / activeLayout.artifactsPerPage)) : 1;
-    const totalPages = Math.max(textPages.length, artifactPages);
-
-    pages = Array.from({length: totalPages}, function (_, index) {
-      const pageArtifacts = inlineArtifactsEnabled ?
-        allArtifacts.slice(index * activeLayout.artifactsPerPage, (index + 1) * activeLayout.artifactsPerPage) :
-        [];
-      return {
-        lines: textPages[index] || [{className: "blank", text: "", inline: false}],
-        artifacts: pageArtifacts,
-        placement: inlineArtifactsEnabled ? placement : PLACEMENT_NONE,
-      };
-    });
+    const lines = shapeLines(normalized, activeLayout.wrapWidth);
+    const visibleLines = lines.slice(0, activeLayout.maxLines);
+    const visibleArtifacts = inlineArtifactsEnabled ? allArtifacts.slice(0, activeLayout.maxArtifacts) : [];
+    const overflowLines = Math.max(0, lines.length - activeLayout.maxLines);
+    const overflowArtifacts = inlineArtifactsEnabled ? Math.max(0, allArtifacts.length - activeLayout.maxArtifacts) : 0;
+    const overflowChars = Math.max(0, rawValue.length - value.length);
+    const overflow = overflowLines > 0 || overflowArtifacts > 0;
 
     charCount.textContent = String(value.length) + " / " + String(MAX_CHARS);
-    currentPage = 0;
-    renderPage();
+    renderLayout(visibleLines, visibleArtifacts, inlineArtifactsEnabled ? placement : PLACEMENT_NONE);
     renderArtifacts(allArtifacts);
+
+    currentLayoutState = {
+      overflowLines: overflowLines,
+      overflowArtifacts: overflowArtifacts,
+      overflowChars: overflowChars,
+    };
+
+    const isBlank = value.trim().length === 0;
+    if (overflow) {
+      const parts = [];
+      if (overflowLines > 0) parts.push("+" + String(overflowLines) + " lines");
+      if (overflowArtifacts > 0) parts.push("+" + String(overflowArtifacts) + " artifacts");
+      publishStatus.textContent = "Does not fit fixed 320x240: " + parts.join(", ") + ".";
+    } else if (overflowChars > 0) {
+      publishStatus.textContent = "Trimmed to " + String(MAX_CHARS) + " characters.";
+    } else {
+      publishStatus.textContent = "";
+    }
+
+    publishBtn.disabled = isBlank || overflow;
   }
 
   async function publish() {
     const body = input.value.trim();
     if (!body) {
       publishStatus.textContent = "Message is blank.";
+      return;
+    }
+    if (currentLayoutState.overflowLines > 0 || currentLayoutState.overflowArtifacts > 0 || currentLayoutState.overflowChars > 0) {
+      publishStatus.textContent = "Message must fit fixed 320x240 before publish.";
       return;
     }
 
@@ -581,20 +611,6 @@
   }
 
   input.addEventListener("input", updatePreview);
-  prevPageBtn.addEventListener("click", function () {
-    currentPage -= 1;
-    renderPage();
-  });
-  nextPageBtn.addEventListener("click", function () {
-    currentPage += 1;
-    renderPage();
-  });
-  fontSelect.addEventListener("change", function () {
-    applyFontProfile(fontSelect.value);
-    updatePreview();
-  });
   publishBtn.addEventListener("click", publish);
-
-  applyFontProfile(defaultFontId);
   updatePreview();
 })();

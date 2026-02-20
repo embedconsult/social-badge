@@ -34,7 +34,7 @@ All coordinates are absolute pixels.
 - Only region where message content is painted.
 
 3. Bottom chrome: `x=0, y=264, w=400, h=36`
-- Pagination (`1/N`) and system status icons.
+- Fixed status band for device/system chrome (no pagination controls in v1).
 
 4. Side gutters:
 - Left: `x=0, y=24, w=40, h=240`
@@ -50,8 +50,9 @@ Typography baseline:
 
 1. Font size: `16px`
 2. Line height: `18px`
-3. Max lines/page: `12`
-4. Font profile IDs: `noto-sans-mono`, `noto-sans`, `noto-serif`, `atkinson`, `ibm-plex-mono`
+3. Max lines in right/left layout: `12`
+4. Max lines in top/bottom layout: `6`
+5. Font profile IDs: `noto-sans-mono`, `noto-sans`, `noto-serif`, `atkinson`, `ibm-plex-mono`
 
 Extended markdown set (v1 preview):
 
@@ -68,10 +69,11 @@ Extended markdown set (v1 preview):
 
 Typst-style extension directives:
 
-1. Placement: `#place("right"|"left"|"top"|"bottom"|"none")`
-2. QR payload: `#qr("https://example.com")`
-3. Calendar entry: `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
-4. Contact card: `#contact("Name", "phone", "email", "https://url")`
+1. Font: `#font("nsm"|"ns"|"ser"|"atk"|"ibm")`
+2. Placement: `#place("right"|"left"|"top"|"bottom"|"none")`
+3. QR payload: `#qr("https://example.com")`
+4. Calendar entry: `#event("YYYY-MM-DD HH:MM", "Title", "Location")`
+5. Contact card: `#contact("Name", "phone", "email", "https://url")`
 
 Typst directives are non-printing control lines in preview/layout. They produce
 QR artifacts and placement behavior but do not render as body text lines.
@@ -108,8 +110,9 @@ Each phase has explicit input/output to keep behavior testable.
 - Word-wrap first, hard-wrap unbreakable tokens second.
 
 4. Paginate
-- Input: line boxes + line capacity (`12`).
-- Output: ordered pages.
+- Input: line boxes + line/artifact capacity for the selected placement profile.
+- Output: a single `320x240` page fit result.
+- Overflow is validation failure, not pagination.
 
 5. Paint Web
 - Input: page model.
@@ -131,7 +134,7 @@ For each rendered page, produce:
 
 1. `render_spec_version` (string)
 2. `render_profile_id` (for example: `msg_320x240_v1`)
-3. `page_index` and `page_count`
+3. `page_index=1` and `page_count=1` (v1 fixed page)
 4. `plain_text` (copy/paste-friendly text as rendered)
 5. `image_320x240` (badge display artifact)
 6. `qr_artifacts` (list of URL/event/contact payloads for QR generation)
@@ -150,6 +153,7 @@ Notes:
 2. No variable padding/margins per message in v1.
 3. No trust-aware content styling inside body lines.
 4. Line breaking depends only on normalized text, fixed geometry, and font metrics.
+5. Overflow does not create additional pages; content must be edited to fit.
 
 ## Non-goals for v1
 

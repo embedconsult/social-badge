@@ -35,4 +35,4 @@ shards install
 crystal run src/main.cr
 ```
 
-Then visit `http://127.0.0.1:3000/health`.
+Then visit `http://127.0.0.1:30000/health`.

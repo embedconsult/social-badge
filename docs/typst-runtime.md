@@ -49,5 +49,5 @@ Notes:
 
 ```bash
 typst --version
-curl -fsS http://127.0.0.1:3000/health | jq .
+curl -fsS http://127.0.0.1:30000/health | jq .
 ```

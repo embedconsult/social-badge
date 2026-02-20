@@ -55,10 +55,10 @@ inspecting queue state, marking delivery outcomes, and accepting inbound envelop
 
 ## Web typesetting is canonical; badge consumes rendered image artifacts
 
-For the `MSG_320x240` viewport, browser layout behavior is the canonical typesetting reference.
-The badge LVGL path should consume deterministic `320x240` image artifacts produced from the same
-layout contract, while web output preserves selectable/copyable text. Trust indicators stay in
-chrome only and never alter message body content.
+For the `MSG_320x240` message window, browser layout behavior is the canonical
+typesetting reference. The badge LVGL path should consume deterministic
+`320x240` image artifacts produced from the same layout contract, while web
+output preserves selectable/copyable text.
 
 ## Authoring preview supports structured QR artifacts
 
@@ -74,7 +74,7 @@ limit with no pagination fallback; overflow must be corrected at author time.
 ## Typst package is the fixture renderer for bit-exact layout tests
 
 `typst/social-badge/layout.typ` defines the deterministic `320x240` message
-window typesetting contract (without UI chrome) used for fixture rendering.
+window typesetting contract used for fixture rendering.
 `scripts/check_typst_layouts.cr` compiles cases from
 `testdata/typst/layout_cases.json` directly from raw message content and
 verifies SHA-256 hashes for bit-exact regression checks. This keeps layout

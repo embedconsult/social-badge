@@ -20,7 +20,7 @@ Parameters:
 2. Optional defaults for `default-font` and `default-placement`.
 
 The package renders only the message window (`320x240`) with a fixed `8px` inset
-content box (`304x224`). It does not render device chrome.
+content box (`304x224`).
 
 Supported non-printing directives inside `message`:
 

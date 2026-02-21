@@ -7,6 +7,13 @@ The web preview endpoint (`POST /api/preview/render`) requires:
 
 3. Optional bundled Typst binary at `lib/typst/bin/typst` (provided by the `typst` shard postinstall build).
 
+If the shard is installed but `lib/typst/bin/typst` is missing, rerun:
+
+```bash
+cd lib/typst
+RUSTUP_TOOLCHAIN=1.92.0-x86_64-unknown-linux-gnu bash scripts/postinstall.sh
+```
+
 On startup, the server now probes Typst availability and logs either:
 
 1. `Typst preview enabled: ...`

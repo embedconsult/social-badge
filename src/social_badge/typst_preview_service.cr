@@ -339,7 +339,7 @@ module SocialBadge
       unless typst_path
         return StartupStatus.new(
           available: false,
-          detail: "Typst preview unavailable: typst not found in PATH",
+          detail: "Typst preview unavailable: typst not found in PATH or lib/typst/bin/typst",
           typst_path: nil
         )
       end
@@ -413,7 +413,11 @@ module SocialBadge
     private def typst_executable? : String?
       Process.find_executable("typst") || begin
         bundled = File.join(ROOT_DIR, "lib/typst/bin/typst")
-        File.exists?(bundled) ? bundled : nil
+        bundled_executable = File.info?(bundled).try { |info|
+          perms = info.permissions
+          perms.owner_execute? || perms.group_execute? || perms.other_execute?
+        } || false
+        bundled_executable ? bundled : nil
       end
     end
 

@@ -26,7 +26,10 @@ describe SocialBadge::TypstPreviewService do
   end
 
   it "renders inline #link syntax as an SVG link" do
-    next unless (Process.find_executable("typst") || File.exists?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")))
+    next unless (Process.find_executable("typst") || (File.info?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")).try { |info|
+                  perms = info.permissions
+                  perms.owner_execute? || perms.group_execute? || perms.other_execute?
+                } || false))
 
     service = SocialBadge::TypstPreviewService.new
     payload = {
@@ -38,7 +41,10 @@ describe SocialBadge::TypstPreviewService do
   end
 
   it "renders message previews as SVG via Typst" do
-    next unless (Process.find_executable("typst") || File.exists?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")))
+    next unless (Process.find_executable("typst") || (File.info?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")).try { |info|
+                  perms = info.permissions
+                  perms.owner_execute? || perms.group_execute? || perms.other_execute?
+                } || false))
 
     service = SocialBadge::TypstPreviewService.new
     payload = {

@@ -139,7 +139,11 @@ module SocialBadge
           next
         end
 
-        nodes << "#(#{typst_string(line)})"
+        if inline_node = inline_content_node(line)
+          nodes << inline_node
+        else
+          nodes << "#(#{typst_string(line)})"
+        end
         nodes << "#linebreak()"
       end
 
@@ -246,6 +250,37 @@ module SocialBadge
         .gsub(/\\\\/, "\\")
     end
 
+    private def inline_content_node(line : String) : String?
+      link_pattern = /#link\(\s*"((?:[^"\\]|\\.)*)"\s*\)\s*\[((?:[^\]\\]|\\.)*)\]/
+      cursor = 0
+      parts = [] of String
+
+      while match = line.match(link_pattern, cursor)
+        start = match.begin(0)
+        finish = match.end(0)
+        break if finish <= start
+
+        if start > cursor
+          segment = line.byte_slice(cursor, start - cursor)
+          parts << "#(#{typst_string(segment)})" unless segment.empty?
+        end
+
+        url = unescape_typst(match[1])
+        label = unescape_typst(match[2])
+        parts << "#link(#{typst_string(url)})[#{typst_string(label)}]"
+        cursor = finish
+      end
+
+      return nil if parts.empty?
+
+      if cursor < line.bytesize
+        segment = line.byte_slice(cursor, line.bytesize - cursor)
+        parts << "#(#{typst_string(segment)})" unless segment.empty?
+      end
+
+      "#[#{parts.join}]"
+    end
+
     private def build_typst_source(font_id : String, body_typst : String) : String
       layout_path = File.join(ROOT_DIR, "typst/social-badge/layout.typ")
       typ_path = File.join(CACHE_DIR, "_render.typ")
@@ -271,7 +306,7 @@ module SocialBadge
       output = IO::Memory.new
       error = IO::Memory.new
       status = Process.run(
-        "typst",
+        typst_executable,
         ["compile", "--root", ROOT_DIR, typ_path, svg_path, "--format", "svg"],
         output: output,
         error: error
@@ -282,7 +317,7 @@ module SocialBadge
         err = output.to_s if err.empty?
         first_line = err.lines.first?.try(&.strip) || ""
         detail = first_line.empty? ? "Preview render failed" : "Preview render failed: #{first_line}"
-        if snap_confinement_error?(Process.find_executable("typst"), first_line)
+        if snap_confinement_error?(typst_executable?, first_line)
           detail = "Preview render failed: snap confinement blocked file access; install typst from official binary or cargo"
         end
         raise RenderError.new(detail)
@@ -300,7 +335,7 @@ module SocialBadge
     end
 
     private def probe_startup : StartupStatus
-      typst_path = Process.find_executable("typst")
+      typst_path = typst_executable?
       unless typst_path
         return StartupStatus.new(
           available: false,
@@ -354,7 +389,7 @@ module SocialBadge
       output = IO::Memory.new
       error = IO::Memory.new
       status = Process.run(
-        "typst",
+        typst_executable,
         ["compile", "--root", ROOT_DIR, probe_typ, probe_svg, "--format", "svg"],
         output: output,
         error: error
@@ -371,9 +406,20 @@ module SocialBadge
       message.empty? ? ex.class.name : message
     end
 
+    private def typst_executable : String
+      typst_executable? || "typst"
+    end
+
+    private def typst_executable? : String?
+      Process.find_executable("typst") || begin
+        bundled = File.join(ROOT_DIR, "lib/typst/bin/typst")
+        File.exists?(bundled) ? bundled : nil
+      end
+    end
+
     private def typst_version : String?
       output = IO::Memory.new
-      status = Process.run("typst", ["--version"], output: output, error: Process::Redirect::Close)
+      status = Process.run(typst_executable, ["--version"], output: output, error: Process::Redirect::Close)
       return nil unless status.success?
       output.to_s.strip
     rescue

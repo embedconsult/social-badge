@@ -5,6 +5,8 @@ The web preview endpoint (`POST /api/preview/render`) requires:
 1. `typst` CLI in `PATH`
 2. Vendored QR package files in `typst/vendor/tiaoma`
 
+3. Optional bundled Typst binary at `lib/typst/bin/typst` (provided by the `typst` shard postinstall build).
+
 On startup, the server now probes Typst availability and logs either:
 
 1. `Typst preview enabled: ...`
@@ -51,3 +53,11 @@ Notes:
 typst --version
 curl -fsS http://127.0.0.1:30000/health | jq .
 ```
+
+## Authoring behavior
+
+The preview translator supports a compact subset of Typst-friendly authoring:
+
+1. `#font(...)`, `#place(...)`, `#qr(...)`, `#event(...)`, and `#contact(...)` directives.
+2. Markdown-style headings (`# Heading`) converted to bold text with a line break.
+3. Inline Typst links written as `#link("url")[Label]` inside normal text lines.

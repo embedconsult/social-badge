@@ -20,3 +20,6 @@ dependencies:
     github: embedconsult/lvgl-crystal
   sqlite3:
     github: crystal-lang/crystal-sqlite3
+  typst:
+    github: embedconsult/typst-crystal
+    version: 0.14.2-20260220

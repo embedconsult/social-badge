@@ -25,11 +25,20 @@ describe SocialBadge::TypstPreviewService do
     end
   end
 
+  it "renders inline #link syntax as an SVG link" do
+    next unless (Process.find_executable("typst") || File.exists?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")))
+
+    service = SocialBadge::TypstPreviewService.new
+    payload = {
+      body: "Learn more at #link(\"https://bbb.io/badge\")[Badge]",
+    }.to_json
+
+    rendered = service.render(IO::Memory.new(payload))
+    rendered.svg.should contain("https://bbb.io/badge")
+  end
+
   it "renders message previews as SVG via Typst" do
-    unless Process.find_executable("typst")
-      pending "typst not available in PATH"
-      next
-    end
+    next unless (Process.find_executable("typst") || File.exists?(File.join(SocialBadge::TypstPreviewService::ROOT_DIR, "lib/typst/bin/typst")))
 
     service = SocialBadge::TypstPreviewService.new
     payload = {

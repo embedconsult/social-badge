@@ -11,6 +11,7 @@ Initial Crystal scaffold for the Social Badge peer node.
   contact controls rendered through local Typst packages.
 - A small in-memory domain service for posting Meshtastic-friendly messages.
 - Canonical Meshtastic envelope projection and HTTP peer relay queue/retry endpoints.
+- Machine-readable Meshtastic hardware-trial checklist endpoint for real radio validation planning.
 - Explicit JSON request models for API payload validation.
 - Project-level `AGENTS.md` with coding workflow guidance.
 - Typst message-window layout package + Crystal bit-exact PNG fixture checker.

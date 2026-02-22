@@ -98,3 +98,19 @@ Kemal exposes this through:
 
 The endpoint lets badge and web tooling consume a stable JSON checklist for real radio testing
 without hard-coding protocol assumptions in UI clients.
+
+## Meshtastic adapter boundary now supports practical payload handoff
+
+`MeshtasticAdapterService` introduces a dedicated encode/decode boundary for compact
+Meshtastic payloads with an enforced `233`-byte payload budget. The adapter keeps
+wire keys short and maps trust levels to compact integer codes so payloads stay
+relay-friendly over constrained radio links.
+
+`PeerTransportService` now exports queued relay jobs as base64 payloads and accepts
+base64 payload ingestion for receive flows. Kemal exposes this through JSON endpoints:
+
+- `GET /api/peer/outbound_queue/:id/payload`
+- `POST /api/peer/inbox_payload`
+
+This keeps route handlers thin while providing a practical bridge contract for radio
+or gateway processes that move encoded Meshtastic frames.

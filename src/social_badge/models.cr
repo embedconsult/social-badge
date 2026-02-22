@@ -82,6 +82,12 @@ module SocialBadge
     end
   end
 
+  struct InboundMeshPayloadRequest
+    include JSON::Serializable
+
+    getter payload_b64 : String
+  end
+
   struct EnqueueRelayRequest
     include JSON::Serializable
 

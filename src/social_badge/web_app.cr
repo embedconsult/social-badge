@@ -100,6 +100,20 @@ module SocialBadge
         @peer_transport.queue(limit.clamp(1, 100)).to_json
       end
 
+      get "/api/peer/outbound_queue/:id/payload" do |env|
+        env.response.content_type = "application/json"
+        {
+          id:          env.params.url["id"],
+          payload_b64: @peer_transport.payload_base64(env.params.url["id"]),
+        }.to_json
+      rescue ex : KeyError
+        env.response.status_code = 404
+        {error: "Unknown relay job id"}.to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 422
+        {error: ex.message}.to_json
+      end
+
       post "/api/peer/relay" do |env|
         env.response.content_type = "application/json"
         relay_job = @peer_relay.enqueue(env.request.body)
@@ -116,6 +130,20 @@ module SocialBadge
       post "/api/peer/inbox" do |env|
         env.response.content_type = "application/json"
         message = @peer_relay.receive(env.request.body)
+        env.response.status_code = 202
+        if message
+          {accepted: true, duplicate: false, message_id: message.id}.to_json
+        else
+          {accepted: true, duplicate: true}.to_json
+        end
+      rescue ex : ArgumentError
+        env.response.status_code = 422
+        {error: ex.message}.to_json
+      end
+
+      post "/api/peer/inbox_payload" do |env|
+        env.response.content_type = "application/json"
+        message = @peer_relay.receive_payload(env.request.body)
         env.response.status_code = 202
         if message
           {accepted: true, duplicate: false, message_id: message.id}.to_json

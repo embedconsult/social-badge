@@ -60,4 +60,17 @@ describe SocialBadge::PeerTransportService do
     duplicate.should be_nil
     timeline.timeline.first.id.should eq("peer-message-1")
   end
+
+  it "exports relay payloads in base64 for radio handoff" do
+    timeline = SocialBadge::TimelineService.new
+    posted = timeline.post("hello radio")
+    service = SocialBadge::PeerTransportService.new(timeline)
+
+    job = service.enqueue("https://peer.example", posted.id)
+    payload_b64 = service.payload_base64(job.id)
+    decoded = SocialBadge::MeshtasticAdapterService.new.decode_base64(payload_b64)
+
+    decoded.message_id.should eq(posted.id)
+    decoded.body.should eq("hello radio")
+  end
 end

@@ -3,8 +3,9 @@ require "./peer_transport_service"
 
 module SocialBadge
   class PeerRelayService
-    ERROR_PREFIX       = "Invalid relay payload"
-    INBOX_ERROR_PREFIX = "Invalid peer envelope"
+    ERROR_PREFIX         = "Invalid relay payload"
+    INBOX_ERROR_PREFIX   = "Invalid peer envelope"
+    PAYLOAD_ERROR_PREFIX = "Invalid Meshtastic payload"
 
     def initialize(@transport : PeerTransportService)
     end
@@ -19,11 +20,25 @@ module SocialBadge
       @transport.receive(envelope)
     end
 
+    def receive_payload(request_body : IO?) : Message?
+      payload = parse_payload_request(request_body)
+      @transport.receive_payload(payload.payload_b64)
+    rescue ArgumentError
+      raise ArgumentError.new(PAYLOAD_ERROR_PREFIX)
+    end
+
     private def parse_relay_payload(request_body : IO?) : EnqueueRelayRequest
       raw_payload = request_body.try(&.gets_to_end) || "{}"
       EnqueueRelayRequest.from_json(raw_payload)
     rescue JSON::ParseException | JSON::SerializableError
       raise ArgumentError.new(ERROR_PREFIX)
+    end
+
+    private def parse_payload_request(request_body : IO?) : InboundMeshPayloadRequest
+      raw_payload = request_body.try(&.gets_to_end) || "{}"
+      InboundMeshPayloadRequest.from_json(raw_payload)
+    rescue JSON::ParseException | JSON::SerializableError
+      raise ArgumentError.new(PAYLOAD_ERROR_PREFIX)
     end
 
     private def parse_inbox_payload(request_body : IO?) : MeshtasticEnvelope

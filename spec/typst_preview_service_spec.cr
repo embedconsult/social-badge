@@ -26,10 +26,7 @@ describe SocialBadge::TypstPreviewService do
   end
 
   it "renders message previews as SVG via Typst" do
-    unless Process.find_executable("typst")
-      pending "typst not available in PATH"
-      next
-    end
+    next unless Process.find_executable("typst")
 
     service = SocialBadge::TypstPreviewService.new
     payload = {

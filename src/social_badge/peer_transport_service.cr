@@ -2,6 +2,7 @@ require "uuid"
 require "uri"
 require "./timeline_service"
 require "./meshtastic_envelope_service"
+require "./meshtastic_adapter_service"
 
 module SocialBadge
   class PeerTransportService
@@ -11,6 +12,7 @@ module SocialBadge
       @timeline : TimelineService,
       @envelopes : MeshtasticEnvelopeService = MeshtasticEnvelopeService.new,
       @max_attempts : Int32 = DEFAULT_MAX_ATTEMPTS,
+      @adapter : MeshtasticAdapterService = MeshtasticAdapterService.new,
     )
       @jobs = [] of OutboundRelayJob
       @jobs_by_id = {} of String => OutboundRelayJob
@@ -58,6 +60,16 @@ module SocialBadge
 
     def receive(envelope : MeshtasticEnvelope) : Message?
       @timeline.receive(envelope)
+    end
+
+    def payload_base64(job_id : String) : String
+      job = fetch_job(job_id)
+      @adapter.encode_base64(job.envelope)
+    end
+
+    def receive_payload(encoded_payload : String) : Message?
+      envelope = @adapter.decode_base64(encoded_payload)
+      receive(envelope)
     end
 
     private def fetch_job(job_id : String) : OutboundRelayJob

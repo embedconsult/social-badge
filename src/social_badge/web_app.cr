@@ -7,6 +7,7 @@ require "./authoring_page_service"
 require "./typst_preview_service"
 require "./peer_relay_service"
 require "./peer_transport_service"
+require "./hardware_trial_service"
 
 module SocialBadge
   class WebApp
@@ -22,6 +23,7 @@ module SocialBadge
       @authoring_page = AuthoringPageService.new
       @typst_preview = TypstPreviewService.new
       @peer_relay = PeerRelayService.new(@peer_transport)
+      @hardware_trials = HardwareTrialService.new
 
       if @typst_preview.startup_status.available
         STDERR.puts "[social-badge] Typst preview enabled: #{@typst_preview.startup_status.detail}"
@@ -85,6 +87,11 @@ module SocialBadge
       rescue ex : TypstPreviewService::RenderError
         env.response.status_code = 500
         {error: ex.message}.to_json
+      end
+
+      get "/api/meshtastic/hardware_trial" do |env|
+        env.response.content_type = "application/json"
+        @hardware_trials.as_json
       end
 
       get "/api/peer/outbound_queue" do |env|

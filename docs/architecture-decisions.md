@@ -87,3 +87,14 @@ To avoid placeholder QR glyphs, the Typst layout package now imports a vendored
 local copy of the `tiaoma` plugin (`typst/vendor/tiaoma`) and generates real
 QR code symbols in `#qr(...)` calls. This keeps fixture rendering offline and
 repeatable while producing standards-compliant QR output.
+
+## Hardware trial readiness is exposed as a machine-readable checklist
+
+`HardwareTrialService` captures a Meshtastic-focused hardware validation checklist and keeps
+LoRaWAN network-server work explicitly out of v1 scope for this repository.
+Kemal exposes this through:
+
+- `GET /api/meshtastic/hardware_trial`
+
+The endpoint lets badge and web tooling consume a stable JSON checklist for real radio testing
+without hard-coding protocol assumptions in UI clients.

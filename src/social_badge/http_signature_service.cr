@@ -30,6 +30,14 @@ module SocialBadge
       end
     end
 
+    private struct DigestHeader
+      getter algorithm : String
+      getter digest_b64 : String
+
+      def initialize(@algorithm : String, @digest_b64 : String)
+      end
+    end
+
     private struct CachedKey
       getter pem : String
       getter fetched_at : Time
@@ -55,6 +63,9 @@ module SocialBadge
       end
 
       return VerificationResult.new(true) if @skip_verify
+
+      digest_validation = validate_digest(request)
+      return digest_validation unless digest_validation.ok
 
       parsed = parse_signature(signature_header)
       signing_string = build_signing_string(parsed.headers, request)
@@ -122,6 +133,37 @@ module SocialBadge
         end
       end
       lines.join("\n")
+    end
+
+    private def validate_digest(request : HTTP::Request) : VerificationResult
+      digest_header = request.headers["Digest"]?
+      return VerificationResult.new(false, "Missing Digest header") unless digest_header
+
+      parsed = parse_digest(digest_header)
+      algorithm = parsed.algorithm.downcase
+      return VerificationResult.new(false, "Unsupported Digest algorithm") unless algorithm == "sha-256"
+
+      body = request.body.try(&.gets_to_end) || ""
+      body_bytes = body.to_slice
+      computed = Base64.strict_encode(OpenSSL::Digest.new("SHA256").digest(body_bytes))
+      return VerificationResult.new(false, "Digest mismatch") unless computed == parsed.digest_b64
+
+      request.body = IO::Memory.new(body)
+      VerificationResult.new(true)
+    rescue ex : ArgumentError
+      VerificationResult.new(false, ex.message)
+    end
+
+    private def parse_digest(header : String) : DigestHeader
+      parts = header.split(",").map(&.strip)
+      parts.each do |part|
+        algorithm, value = part.split("=", 2)
+        next unless algorithm && value
+        algorithm = algorithm.strip
+        value = value.strip
+        return DigestHeader.new(algorithm, value)
+      end
+      raise ArgumentError.new("Invalid Digest header")
     end
 
     private def verify_with_key(

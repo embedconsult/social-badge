@@ -2,6 +2,7 @@ require "base64"
 require "http/client"
 require "json"
 require "openssl"
+require "uri"
 require "./activitypub_config"
 
 module SocialBadge
@@ -29,11 +30,21 @@ module SocialBadge
       end
     end
 
+    private struct CachedKey
+      getter pem : String
+      getter fetched_at : Time
+
+      def initialize(@pem : String, @fetched_at : Time = Time.utc)
+      end
+    end
+
     def initialize(
       @config : ActivityPubConfig = ActivityPubConfig.new,
       @allow_unsigned : Bool = @config.allow_unsigned,
       @skip_verify : Bool = @config.skip_signature_verify,
+      @key_fetcher : Proc(String, String)? = nil,
     )
+      @key_cache = {} of String => CachedKey
     end
 
     def verify(request : HTTP::Request) : VerificationResult
@@ -47,7 +58,6 @@ module SocialBadge
 
       parsed = parse_signature(signature_header)
       signing_string = build_signing_string(parsed.headers, request)
-      public_key_pem = resolve_public_key(parsed.key_id)
 
       algorithm = parsed.algorithm.downcase
       unless algorithm == "rsa-sha256" || algorithm == "hs2019"
@@ -55,14 +65,19 @@ module SocialBadge
       end
 
       signature = Base64.decode(parsed.signature_b64)
-      public_key = OpenSSL::PKey::RSA.new(public_key_pem)
       digest = OpenSSL::Digest.new("SHA256")
 
-      if public_key.verify(digest, signature, signing_string)
-        VerificationResult.new(true)
-      else
-        VerificationResult.new(false, "Invalid HTTP Signature")
+      verified = verify_with_key(parsed.key_id, signature, signing_string, digest, force_refresh: false)
+      return VerificationResult.new(true) if verified
+
+      if local_key_id?(parsed.key_id)
+        return VerificationResult.new(false, "Invalid HTTP Signature")
       end
+
+      verified = verify_with_key(parsed.key_id, signature, signing_string, digest, force_refresh: true)
+      return VerificationResult.new(true) if verified
+
+      VerificationResult.new(false, "Invalid HTTP Signature")
     rescue ex : ArgumentError
       VerificationResult.new(false, ex.message)
     rescue ex
@@ -109,8 +124,43 @@ module SocialBadge
       lines.join("\n")
     end
 
-    private def resolve_public_key(key_id : String) : String
-      return @config.public_key_pem if key_id == @config.public_key_id
+    private def verify_with_key(
+      key_id : String,
+      signature : Bytes,
+      signing_string : String,
+      digest : OpenSSL::Digest,
+      force_refresh : Bool,
+    ) : Bool
+      public_key_pem = resolve_public_key(key_id, force_refresh)
+      public_key = OpenSSL::PKey::RSA.new(public_key_pem)
+      public_key.verify(digest, signature, signing_string)
+    end
+
+    private def local_key_id?(key_id : String) : Bool
+      key_id == @config.public_key_id
+    end
+
+    private def resolve_public_key(key_id : String, force_refresh : Bool) : String
+      return @config.public_key_pem if local_key_id?(key_id)
+
+      cached = @key_cache[key_id]?
+      ttl = @config.key_cache_ttl_seconds
+      if !force_refresh && cached && ttl > 0
+        age = Time.utc - cached.fetched_at
+        return cached.pem if age.total_seconds <= ttl
+      end
+
+      public_key_pem = fetch_public_key(key_id)
+      @key_cache[key_id] = CachedKey.new(public_key_pem)
+      public_key_pem
+    rescue URI::Error
+      raise ArgumentError.new("Invalid keyId URL")
+    end
+
+    private def fetch_public_key(key_id : String) : String
+      if @key_fetcher
+        return @key_fetcher.not_nil!.call(key_id)
+      end
 
       uri = URI.parse(key_id)
       client = HTTP::Client.new(uri)

@@ -8,6 +8,7 @@ module SocialBadge
     getter public_key_pem : String
     getter allow_unsigned : Bool
     getter skip_signature_verify : Bool
+    getter key_cache_ttl_seconds : Int32
 
     def initialize(
       @base_url : String = ENV["SOCIAL_BADGE_BASE_URL"]? || "http://127.0.0.1:30000",
@@ -16,6 +17,7 @@ module SocialBadge
       @public_key_pem : String = ENV["SOCIAL_BADGE_ACTOR_PUBLIC_KEY_PEM"]? || "UNCONFIGURED",
       @allow_unsigned : Bool = (ENV["SOCIAL_BADGE_ALLOW_UNSIGNED_AP"]? || "false") == "true",
       @skip_signature_verify : Bool = (ENV["SOCIAL_BADGE_SKIP_SIGNATURE_VERIFY"]? || "false") == "true",
+      @key_cache_ttl_seconds : Int32 = (ENV["SOCIAL_BADGE_KEY_CACHE_TTL_SEC"]? || "21600").to_i,
     )
     end
 

@@ -53,6 +53,14 @@ peer envelope ingestion. `PeerRelayService` keeps HTTP parsing concerns separate
 state transitions. Kemal exposes this baseline via JSON endpoints for enqueueing relay jobs,
 inspecting queue state, marking delivery outcomes, and accepting inbound envelopes.
 
+## Local persistence starts with JSON snapshots
+
+To keep dependencies minimal while meeting v1 durability needs, local state now persists as
+JSON snapshots written under a configurable data directory (`SOCIAL_BADGE_DATA_DIR`, default
+`data/`). `TimelineService` saves identity, messages, and dedupe keys, while
+`PeerTransportService` persists outbound relay jobs. The JSON snapshots can be replaced by a
+SQLite-backed store later without changing the public service interfaces.
+
 ## Web typesetting is canonical; badge consumes rendered image artifacts
 
 For the `MSG_320x240` message window, Typst rendering is the canonical

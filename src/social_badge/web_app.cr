@@ -8,17 +8,19 @@ require "./typst_preview_service"
 require "./peer_relay_service"
 require "./peer_transport_service"
 require "./hardware_trial_service"
+require "./persistence_service"
 
 module SocialBadge
   class WebApp
     def initialize(
-      timeline : TimelineService = TimelineService.new,
+      timeline : TimelineService? = nil,
       policies : PolicyService = PolicyService.new,
       peer_transport : PeerTransportService? = nil,
     )
-      @timeline = timeline
+      @persistence = PersistenceService.new
+      @timeline = timeline || TimelineService.new(@persistence)
       @policies = policies
-      @peer_transport = peer_transport || PeerTransportService.new(@timeline)
+      @peer_transport = peer_transport || PeerTransportService.new(@timeline, persistence: @persistence)
       @message_creation = MessageCreationService.new(@timeline)
       @authoring_page = AuthoringPageService.new
       @typst_preview = TypstPreviewService.new

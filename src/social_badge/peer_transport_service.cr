@@ -3,6 +3,7 @@ require "uri"
 require "./timeline_service"
 require "./meshtastic_envelope_service"
 require "./meshtastic_adapter_service"
+require "./persistence_service"
 
 module SocialBadge
   class PeerTransportService
@@ -13,9 +14,18 @@ module SocialBadge
       @envelopes : MeshtasticEnvelopeService = MeshtasticEnvelopeService.new,
       @max_attempts : Int32 = DEFAULT_MAX_ATTEMPTS,
       @adapter : MeshtasticAdapterService = MeshtasticAdapterService.new,
+      @persistence : PersistenceService? = nil,
     )
-      @jobs = [] of OutboundRelayJob
-      @jobs_by_id = {} of String => OutboundRelayJob
+      snapshot = @persistence.try(&.load_relay_queue)
+      if snapshot
+        @jobs = snapshot.jobs
+        @jobs_by_id = @jobs.each_with_object({} of String => OutboundRelayJob) do |job, acc|
+          acc[job.id] = job
+        end
+      else
+        @jobs = [] of OutboundRelayJob
+        @jobs_by_id = {} of String => OutboundRelayJob
+      end
     end
 
     def queue(limit : Int32 = 25) : Array(OutboundRelayJob)
@@ -35,12 +45,14 @@ module SocialBadge
       )
       @jobs << job
       @jobs_by_id[job.id] = job
+      persist!
       job
     end
 
     def mark_delivered(job_id : String) : OutboundRelayJob
       job = fetch_job(job_id)
       job.status = RelayJobStatus::Delivered
+      persist!
       job
     end
 
@@ -55,6 +67,7 @@ module SocialBadge
       else
         job.next_attempt_at = Time.utc + backoff(job.attempts)
       end
+      persist!
       job
     end
 
@@ -70,6 +83,12 @@ module SocialBadge
     def receive_payload(encoded_payload : String) : Message?
       envelope = @adapter.decode_base64(encoded_payload)
       receive(envelope)
+    end
+
+    private def persist!
+      return unless @persistence
+      snapshot = RelayQueueSnapshot.new(@jobs)
+      @persistence.not_nil!.save_relay_queue(snapshot)
     end
 
     private def fetch_job(job_id : String) : OutboundRelayJob

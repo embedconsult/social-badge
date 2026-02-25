@@ -9,6 +9,12 @@ require "./peer_relay_service"
 require "./peer_transport_service"
 require "./hardware_trial_service"
 require "./persistence_service"
+require "./activitypub_config"
+require "./activitypub_actor_service"
+require "./activitypub_inbox_service"
+require "./activitypub_outbox_service"
+require "./webfinger_service"
+require "./http_signature_service"
 
 module SocialBadge
   class WebApp
@@ -26,6 +32,15 @@ module SocialBadge
       @typst_preview = TypstPreviewService.new
       @peer_relay = PeerRelayService.new(@peer_transport)
       @hardware_trials = HardwareTrialService.new
+      @ap_config = ActivityPubConfig.new
+      @webfinger = WebFingerService.new(@ap_config)
+      @ap_actor = ActivityPubActorService.new(@ap_config)
+      @ap_outbox = ActivityPubOutboxService.new(@timeline, @ap_config)
+      @ap_inbox = ActivityPubInboxService.new(@timeline)
+      @signature = HttpSignatureService.new(
+        allow_unsigned: @ap_config.allow_unsigned,
+        skip_verify: @ap_config.skip_signature_verify,
+      )
 
       if @typst_preview.startup_status.available
         STDERR.puts "[social-badge] Typst preview enabled: #{@typst_preview.startup_status.detail}"
@@ -49,6 +64,56 @@ module SocialBadge
           typst_preview_available: @typst_preview.startup_status.available,
           typst_preview_detail:    @typst_preview.startup_status.detail,
         }.to_json
+      end
+
+      get "/.well-known/webfinger" do |env|
+        env.response.content_type = "application/jrd+json"
+        resource = env.params.query["resource"]?
+        raise ArgumentError.new("Missing resource") unless resource
+        @webfinger.lookup(resource).to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 404
+        {error: ex.message}.to_json
+      end
+
+      get "/users/:name" do |env|
+        env.response.content_type = "application/activity+json"
+        @ap_actor.actor_for(env.params.url["name"]).to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 404
+        {error: ex.message}.to_json
+      end
+
+      get "/users/:name/outbox" do |env|
+        env.response.content_type = "application/activity+json"
+        limit = env.params.query["limit"]?.try(&.to_i?) || 25
+        @ap_outbox.outbox_for(env.params.url["name"], limit).to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 404
+        {error: ex.message}.to_json
+      end
+
+      post "/users/:name/inbox" do |env|
+        env.response.content_type = "application/json"
+        verification = @signature.verify(env.request)
+        unless verification.ok
+          env.response.status_code = 401
+          next({error: verification.error}.to_json)
+        end
+
+        message = @ap_inbox.ingest(env.request.body)
+        env.response.status_code = 202
+        if message
+          {accepted: true, duplicate: false, message_id: message.id}.to_json
+        else
+          {accepted: true, duplicate: true}.to_json
+        end
+      rescue ex : ActivityPubInboxService::InvalidActivity
+        env.response.status_code = 422
+        {error: ex.message}.to_json
+      rescue ex : ArgumentError
+        env.response.status_code = 404
+        {error: ex.message}.to_json
       end
 
       get "/api/profile" do |env|

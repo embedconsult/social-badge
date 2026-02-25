@@ -10,6 +10,13 @@ require "./social_badge/meshtastic_adapter_service"
 require "./social_badge/peer_transport_service"
 require "./social_badge/peer_relay_service"
 require "./social_badge/hardware_trial_service"
+require "./social_badge/activitypub_config"
+require "./social_badge/activitypub_models"
+require "./social_badge/webfinger_service"
+require "./social_badge/activitypub_actor_service"
+require "./social_badge/activitypub_inbox_service"
+require "./social_badge/activitypub_outbox_service"
+require "./social_badge/http_signature_service"
 require "./social_badge/web_app"
 
 module SocialBadge

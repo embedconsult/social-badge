@@ -62,6 +62,24 @@ module SocialBadge
       message
     end
 
+    def receive_activity(
+      activity_id : String,
+      actor_id : String,
+      body : String,
+      created_at : Time,
+    ) : Message?
+      return nil if @messages_by_id.has_key?(activity_id)
+
+      message = Message.new(
+        id: activity_id,
+        author_id: actor_id,
+        body: body.strip,
+        created_at: created_at
+      )
+      store(message, "activity:#{activity_id}")
+      message
+    end
+
     private def store(message : Message, dedupe_key : String? = nil)
       @messages << message
       @messages_by_id[message.id] = message

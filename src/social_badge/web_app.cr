@@ -116,6 +116,11 @@ module SocialBadge
         {error: ex.message}.to_json
       end
 
+      get "/api/activitypub/signature_cache" do |env|
+        env.response.content_type = "application/json"
+        @signature.cache_stats.to_json
+      end
+
       get "/api/profile" do |env|
         env.response.content_type = "application/json"
         @timeline.identity.to_json

@@ -38,6 +38,23 @@ module SocialBadge
       end
     end
 
+    struct CacheStats
+      include JSON::Serializable
+
+      getter cache_size : Int32
+      getter hits : Int64
+      getter misses : Int64
+      getter refreshes : Int64
+
+      def initialize(
+        @cache_size : Int32,
+        @hits : Int64,
+        @misses : Int64,
+        @refreshes : Int64,
+      )
+      end
+    end
+
     private struct CachedKey
       getter pem : String
       getter fetched_at : Time
@@ -53,6 +70,9 @@ module SocialBadge
       @key_fetcher : Proc(String, String)? = nil,
     )
       @key_cache = {} of String => CachedKey
+      @cache_hits = 0_i64
+      @cache_misses = 0_i64
+      @cache_refreshes = 0_i64
     end
 
     def verify(request : HTTP::Request) : VerificationResult
@@ -85,6 +105,7 @@ module SocialBadge
         return VerificationResult.new(false, "Invalid HTTP Signature")
       end
 
+      @cache_refreshes += 1
       verified = verify_with_key(parsed.key_id, signature, signing_string, digest, force_refresh: true)
       return VerificationResult.new(true) if verified
 
@@ -189,9 +210,13 @@ module SocialBadge
       ttl = @config.key_cache_ttl_seconds
       if !force_refresh && cached && ttl > 0
         age = Time.utc - cached.fetched_at
-        return cached.pem if age.total_seconds <= ttl
+        if age.total_seconds <= ttl
+          @cache_hits += 1
+          return cached.pem
+        end
       end
 
+      @cache_misses += 1
       public_key_pem = fetch_public_key(key_id)
       @key_cache[key_id] = CachedKey.new(public_key_pem)
       public_key_pem
@@ -217,6 +242,15 @@ module SocialBadge
       public_key_pem
     rescue URI::Error
       raise ArgumentError.new("Invalid keyId URL")
+    end
+
+    def cache_stats : CacheStats
+      CacheStats.new(
+        cache_size: @key_cache.size,
+        hits: @cache_hits,
+        misses: @cache_misses,
+        refreshes: @cache_refreshes,
+      )
     end
   end
 end

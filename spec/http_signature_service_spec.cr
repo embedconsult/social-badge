@@ -96,6 +96,7 @@ TEXT
 
       service.verify(request).ok.should be_true
       calls.should eq(2)
+      service.cache_stats.refreshes.should eq(1)
     end
 
     it "rejects missing signatures by default" do
@@ -146,6 +147,30 @@ TEXT
       result = service.verify(request)
 
       result.ok.should be_false
+    end
+
+    it "tracks cache hits and misses" do
+      key = OpenSSL::PKey::RSA.new(2048)
+      public_pem = key.public_key.to_pem
+      key_id = "http://remote.example.com/users/alice#main-key"
+      fetcher = ->(_requested_key_id : String) { public_pem }
+
+      config = ActivityPubConfig.new(
+        base_url: "http://example.com",
+        actor_name: "demo",
+        public_key_pem: "UNCONFIGURED",
+        key_cache_ttl_seconds: 3600,
+      )
+      service = HttpSignatureService.new(config, key_fetcher: fetcher)
+      request = signed_request(key, key_id, "remote.example.com", body: "payload")
+
+      service.verify(request).ok.should be_true
+      service.verify(request).ok.should be_true
+
+      stats = service.cache_stats
+      stats.misses.should eq(1)
+      stats.hits.should eq(1)
+      stats.cache_size.should eq(1)
     end
   end
 end

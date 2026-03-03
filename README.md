@@ -41,8 +41,14 @@ crystal run src/main.cr
 
 Then visit `http://127.0.0.1:30000/health`.
 
-To run the LVGL badge applet runtime from the same executable (when LVGL backend deps are installed):
+Web UI and badge UI run together from the same process:
 
 ```bash
-SOCIAL_BADGE_RUNTIME=badge_ui crystal run src/main.cr
+crystal run src/main.cr
+```
+
+When no local display/input UI is present, run with LVGL headless backend:
+
+```bash
+LVGL_BACKEND=headless crystal run src/main.cr
 ```

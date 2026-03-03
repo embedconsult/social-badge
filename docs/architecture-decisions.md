@@ -154,5 +154,6 @@ This aligns with LVGL runtime ownership expectations (single UI loop, explicit
 teardown) while keeping message presentation compact and Meshtastic-friendly
 for on-device triage flows.
 
-This runs from the existing `src/main.cr` entrypoint via a runtime-mode env switch
-(`SOCIAL_BADGE_RUNTIME=badge_ui`), avoiding a separate executable target.
+The web and badge UIs run concurrently from the same `src/main.cr` process.
+When no local display/input stack is available, `LVGL_BACKEND=headless` is used
+so the badge applet loop can still execute alongside Kemal.

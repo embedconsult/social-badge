@@ -2,12 +2,18 @@ require "./social_badge"
 require "./social_badge/badge_applet"
 require "kemal"
 
-runtime = ENV["SOCIAL_BADGE_RUNTIME"]? || "web"
+# Prevent lvgl-crystal autorun at process exit; we start the loop explicitly.
+ENV["LVGL_NO_AUTORUN"] = "1"
 
-if runtime == "badge_ui"
-  SocialBadge::BadgeApplet.new
-  exit Lvgl.main
+# Default to headless when no local UI backend is declared.
+unless ENV["SOCIAL_BADGE_LOCAL_UI"]? == "1" || ENV["LVGL_BACKEND"]?
+  ENV["LVGL_BACKEND"] = "headless"
 end
 
 SocialBadge.boot
-Kemal.run 30000
+
+spawn do
+  Kemal.run 30000
+end
+
+exit Lvgl.main

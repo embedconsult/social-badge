@@ -143,3 +143,16 @@ Kemal exposes this through JSON endpoints:
 
 This keeps route handlers thin, maintains compact on-air message defaults, and
 allows Linux radio bridges to interoperate with Supercon Badge messaging styles.
+
+## First-pass badge UI uses an LVGL Applet lifecycle
+
+The badge UI now ships as `SocialBadge::BadgeApplet < Lvgl::Applet` with explicit
+`setup(screen)`, `loop(screen, message)`, and `cleanup(screen)` hooks instead of
+serving UI state over HTTP.
+
+This aligns with LVGL runtime ownership expectations (single UI loop, explicit
+teardown) while keeping message presentation compact and Meshtastic-friendly
+for on-device triage flows.
+
+This runs from the existing `src/main.cr` entrypoint via a runtime-mode env switch
+(`SOCIAL_BADGE_RUNTIME=badge_ui`), avoiding a separate executable target.

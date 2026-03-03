@@ -88,6 +88,25 @@ module SocialBadge
     getter payload_b64 : String
   end
 
+  struct LinuxWioSx1262TxFrame
+    include JSON::Serializable
+
+    getter job_id : String
+    getter payload_b64 : String
+    getter portnum : String
+    getter want_ack : Bool
+    getter destination : String
+
+    def initialize(
+      @job_id : String,
+      @payload_b64 : String,
+      @portnum : String = "TEXT_MESSAGE_APP",
+      @want_ack : Bool = false,
+      @destination : String = "^all",
+    )
+    end
+  end
+
   struct EnqueueRelayRequest
     include JSON::Serializable
 

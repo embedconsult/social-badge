@@ -122,3 +122,24 @@ base64 payload ingestion for receive flows. Kemal exposes this through JSON endp
 
 This keeps route handlers thin while providing a practical bridge contract for radio
 or gateway processes that move encoded Meshtastic frames.
+
+## Linux Wio SX1262 bridge contract supports Meshtastic and Supercon-style frames
+
+`LinuxWioSx1262DriverService` adds a dedicated boundary for Linux-side Wio SX1262
+radio processes. Outbound relay jobs can now be exported as machine-readable
+Meshtastic text-app frames (`payload_b64`, `portnum`, destination metadata)
+without exposing queue internals to driver scripts.
+
+Inbound driver frames accept multiple payload key shapes commonly used by
+Meshtastic wrappers (`payload_b64`, `payload`, nested `packet.decoded.payload`).
+If canonical envelope decode fails, the service attempts a Supercon-compatible
+fallback that treats decoded content as plain text and maps it into constrained
+Meshtastic envelopes with deterministic IDs.
+
+Kemal exposes this through JSON endpoints:
+
+- `GET /api/peer/outbound_queue/:id/linux_wio_sx1262_tx`
+- `POST /api/peer/inbox_linux_wio_sx1262`
+
+This keeps route handlers thin, maintains compact on-air message defaults, and
+allows Linux radio bridges to interoperate with Supercon Badge messaging styles.

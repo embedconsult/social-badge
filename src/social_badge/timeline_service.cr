@@ -90,7 +90,7 @@ module SocialBadge
     private def persist!
       return unless @persistence
       snapshot = TimelineSnapshot.new(
-        identity: @identity,
+        identity: identity,
         messages: @messages,
         seen_dedupe_keys: @seen_dedupe_keys.to_a,
       )

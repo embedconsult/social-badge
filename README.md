@@ -12,6 +12,7 @@ Initial Crystal scaffold for the Social Badge peer node.
 - A small in-memory domain service for posting Meshtastic-friendly messages.
 - Canonical Meshtastic envelope projection, compact payload encoding, and HTTP peer relay queue/retry endpoints.
 - Meshtastic payload handoff endpoints for base64-encoded radio frames (`/api/peer/inbox_payload` and outbound payload export).
+- Linux Wio SX1262 bridge endpoints for Meshtastic text-app framing, including Supercon-friendly receive fallbacks (`/api/peer/outbound_queue/:id/linux_wio_sx1262_tx` and `/api/peer/inbox_linux_wio_sx1262`).
 - Machine-readable Meshtastic hardware-trial checklist endpoint for real radio validation planning.
 - Explicit JSON request models for API payload validation.
 - Project-level `AGENTS.md` with coding workflow guidance.

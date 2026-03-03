@@ -143,3 +143,18 @@ Kemal exposes this through JSON endpoints:
 
 This keeps route handlers thin, maintains compact on-air message defaults, and
 allows Linux radio bridges to interoperate with Supercon Badge messaging styles.
+
+
+## First-pass LVGL UI contract is exposed as JSON
+
+`LvglUiService` provides a compact `lvgl_home_v1` screen model for badge rendering,
+including fixed `400x300` chrome geometry, `320x240` message viewport dimensions,
+compact timeline rows, and canned quick actions that fit browse-first control flows.
+
+Kemal now exposes this as a machine-readable endpoint:
+
+- `GET /api/ui/lvgl/home`
+
+This keeps badge UI state generation in a dedicated service object and allows a
+future Crystal-LVGL runtime to consume a stable JSON contract while preserving
+Meshtastic-friendly text limits.

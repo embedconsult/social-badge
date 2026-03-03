@@ -16,7 +16,6 @@ require "./activitypub_inbox_service"
 require "./activitypub_outbox_service"
 require "./webfinger_service"
 require "./http_signature_service"
-require "./lvgl_ui_service"
 
 module SocialBadge
   class WebApp
@@ -40,7 +39,6 @@ module SocialBadge
       @ap_actor = ActivityPubActorService.new(@ap_config)
       @ap_outbox = ActivityPubOutboxService.new(@timeline, @ap_config)
       @ap_inbox = ActivityPubInboxService.new(@timeline)
-      @lvgl_ui = LvglUiService.new(@timeline)
       @signature = HttpSignatureService.new(
         allow_unsigned: @ap_config.allow_unsigned,
         skip_verify: @ap_config.skip_signature_verify,
@@ -164,13 +162,6 @@ module SocialBadge
         env.response.status_code = 500
         {error: ex.message}.to_json
       end
-
-      get "/api/ui/lvgl/home" do |env|
-        env.response.content_type = "application/json"
-        limit = env.params.query["limit"]?.try(&.to_i?) || 6
-        @lvgl_ui.home(limit.clamp(1, 12)).to_json
-      end
-
       get "/api/meshtastic/hardware_trial" do |env|
         env.response.content_type = "application/json"
         @hardware_trials.as_json

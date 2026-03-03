@@ -12,6 +12,8 @@ license: MIT
 targets:
   social-badge:
     main: src/main.cr
+  badge-ui:
+    main: src/badge_ui_main.cr
 
 dependencies:
   kemal:

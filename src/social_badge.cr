@@ -18,7 +18,6 @@ require "./social_badge/activitypub_actor_service"
 require "./social_badge/activitypub_inbox_service"
 require "./social_badge/activitypub_outbox_service"
 require "./social_badge/http_signature_service"
-require "./social_badge/lvgl_ui_service"
 require "./social_badge/web_app"
 
 module SocialBadge

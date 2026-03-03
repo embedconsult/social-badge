@@ -165,12 +165,6 @@ module SocialBadge
         {error: ex.message}.to_json
       end
 
-      get "/api/ui/lvgl/home" do |env|
-        env.response.content_type = "application/json"
-        limit = env.params.query["limit"]?.try(&.to_i?) || 6
-        @lvgl_ui.home(limit.clamp(1, 12)).to_json
-      end
-
       get "/api/meshtastic/hardware_trial" do |env|
         env.response.content_type = "application/json"
         @hardware_trials.as_json
